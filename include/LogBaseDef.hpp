@@ -28,8 +28,6 @@
 #include <functional>
 #include <string>
 
-#include "core/MMApi.hpp"
-
 namespace mm {
 
 namespace detail {

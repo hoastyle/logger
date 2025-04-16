@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "log/ILogger.hpp"
+#include "ILogger.hpp"
 
 /* preprocess macro */
 #ifdef COMPACT_GOOGLE_LOG_INFO

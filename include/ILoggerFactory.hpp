@@ -24,7 +24,7 @@
 #ifndef INCLUDE_COMMON_LOG_ILOGGERFACTORY_HPP_
 #define INCLUDE_COMMON_LOG_ILOGGERFACTORY_HPP_
 
-#include "log/LogBaseDef.hpp"
+#include "LogBaseDef.hpp"
 
 namespace mm {
 

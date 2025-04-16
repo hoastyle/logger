@@ -1,0 +1,58 @@
+BasedOnStyle: Google
+Standard: Cpp11
+Language: Cpp
+
+# argument layout
+BinPackArguments: true
+BinPackParameters: true 
+ExperimentalAutoDetectBinPacking: false
+
+# 允许构造函数的初始化参数放在下一行
+AllowAllConstructorInitializersOnNextLine: true
+
+# 允许函数声明的所有参数在放在下一行
+AllowAllParametersOfDeclarationOnNextLine: true
+
+# 允许函数调用的所有参数在放在下一行
+AllowAllArgumentsOnNextLine: true
+
+# 连续赋值时，对齐所有等号
+AlignConsecutiveAssignments: true
+
+# 允许短的case标签放在同一行
+AllowShortCaseLabelsOnASingleLine: true
+
+# 允许短的if语句保持在同一行
+AllowShortIfStatementsOnASingleLine: true
+
+AlignAfterOpenBracket: false
+BreakBeforeBinaryOperators: None
+
+# 大括号的换行规则
+BreakBeforeBraces: Attach
+ColumnLimit: 80
+IndentWidth: 2
+
+UseTab: Never
+TabWidth: 2
+
+# 允许重新排版注释
+ReflowComments: true
+
+# 如果为true，则clang格式会为短名称空间添加缺少的名称空间结尾注释，并修复无效的现有名称结束注释
+FixNamespaceComments: true
+
+# 对齐连续的尾随的注释
+AlignTrailingComments: true
+
+# 指针和引用的对齐: Left, Right, Middle
+PointerAlignment: Left
+
+# 继承最常用的指针和引用的对齐方式
+DerivePointerAlignment: false
+
+# 允许排序#include
+SortIncludes: false
+
+# 水平对齐二元和三元表达式的操作数
+AlignOperands: true 

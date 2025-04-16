@@ -26,9 +26,9 @@
 
 #include <string>
 
-#include "log/DisallowCopy.hpp"
-#include "log/ILogger.hpp"
-#include "log/ILoggerFactory.hpp"
+#include "DisallowCopy.hpp"
+#include "ILogger.hpp"
+#include "ILoggerFactory.hpp"
 
 namespace mm {
 

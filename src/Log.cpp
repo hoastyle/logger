@@ -21,7 +21,7 @@
  * by Shanghai Master Matrix Corporation or its suppliers or licensors anyway.
  */
 
-#include "log/Log.hpp"
+#include "Log.hpp"
 
 #include <sys/time.h>
 #include <jsoncpp/json/json.h>
@@ -34,10 +34,7 @@
 #include <vector>
 #include <map>
 
-#include "core/GlobalCommonConfig.hpp"
-#include "basic/MMBasic.hpp"
-#include "basic/MMErrCode.hpp"
-#include "web/Producer.hpp"
+#include "LoggerStatus.hpp"
 
 namespace mm {
 
@@ -120,7 +117,7 @@ void outputLog(const detail::LogLevel lvl, const char* const filename,
           localtime(&tv.tv_sec));
 
       n = std::snprintf(buf + offset, static_cast<std::size_t>(len),
-          "%s.%03d %05ld", timebuf, (int)(tv.tv_usec / 1000), gettid());
+          "%s.%03d %05ld", timebuf, (int)(tv.tv_usec / 1000), static_cast<long int>(gettid()));
 
       if (0 > n) {
         /* there is an error occurred std::snprintf(). */

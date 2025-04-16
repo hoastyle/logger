@@ -21,14 +21,14 @@
  * by Shanghai Master Matrix Corporation or its suppliers or licensors anyway.
  */
 
-#include "log/LoggerManager.hpp"
+#include "LoggerManager.hpp"
 
 #include <unistd.h>
-
 #include <cstring>
 
-#include "log/Log.hpp"
-#include "log/LoggerFactory.hpp"
+#include "Log.hpp"
+#include "LoggerFactory.hpp"
+#include "LoggerStatus.hpp"
 
 namespace mm {
 

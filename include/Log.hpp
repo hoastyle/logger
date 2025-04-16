@@ -30,11 +30,10 @@
 #include <unistd.h>
 
 #include <cstring>
+#include <unordered_map>
 #include <string>
 
-#include "basic/MMBasic.hpp"
-#include "basic/MMErrCode.hpp"
-#include "log/LogBaseDef.hpp"
+#include "LogBaseDef.hpp"
 
 namespace mm {
 
@@ -77,31 +76,31 @@ bool noError(int ec) noexcept;
 #ifdef MM_ENABLE_LOGGING
 
 #define MM_VERBOSE(fmt, ...)                                              \
-  mm::detail::outputLog(mm::detail::LogLevel_Verbose, __file__, __func__, \
+  mm::detail::outputLog(mm::detail::LogLevel_Verbose, __FILE__, __func__, \
       __LINE__, fmt, ##__VA_ARGS__)
 
 #ifdef MM_ENABLE_DEBUG
 #define MM_DEBUG(fmt, ...)                                              \
-  mm::detail::outputLog(mm::detail::LogLevel_Debug, __file__, __func__, \
+  mm::detail::outputLog(mm::detail::LogLevel_Debug, __FILE__, __func__, \
       __LINE__, fmt, ##__VA_ARGS__)
 #else
 #define MM_DEBUG(fmt, ...)
 #endif
 
 #define MM_INFO(fmt, ...)                                              \
-  mm::detail::outputLog(mm::detail::LogLevel_Info, __file__, __func__, \
+  mm::detail::outputLog(mm::detail::LogLevel_Info, __FILE__, __func__, \
       __LINE__, fmt, ##__VA_ARGS__)
 
 #define MM_WARN(fmt, ...)                                              \
-  mm::detail::outputLog(mm::detail::LogLevel_Warn, __file__, __func__, \
+  mm::detail::outputLog(mm::detail::LogLevel_Warn, __FILE__, __func__, \
       __LINE__, fmt, ##__VA_ARGS__)
 
 #define MM_ERROR(fmt, ...)                                              \
-  mm::detail::outputLog(mm::detail::LogLevel_Error, __file__, __func__, \
+  mm::detail::outputLog(mm::detail::LogLevel_Error, __FILE__, __func__, \
       __LINE__, fmt, ##__VA_ARGS__)
 
 #define MM_FATAL(fmt, ...)                                              \
-  mm::detail::outputLog(mm::detail::LogLevel_Fatal, __file__, __func__, \
+  mm::detail::outputLog(mm::detail::LogLevel_Fatal, __FILE__, __func__, \
       __LINE__, fmt, ##__VA_ARGS__)
 
 #else

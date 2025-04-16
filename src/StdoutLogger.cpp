@@ -21,8 +21,8 @@
  * by Shanghai Master Matrix Corporation or its suppliers or licensors anyway.
  */
 
-#include "basic/MMErrCode.hpp"
-#include "log/StdoutLogger.hpp"
+#include "StdoutLogger.hpp"
+#include "LoggerStatus.hpp"
 
 namespace mm {
 

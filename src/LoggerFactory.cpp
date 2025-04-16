@@ -21,10 +21,10 @@
  * by Shanghai Master Matrix Corporation or its suppliers or licensors anyway.
  */
 
-#include "log/LoggerFactory.hpp"
+#include "LoggerFactory.hpp"
 
-#include "log/GlogLogger.hpp"
-#include "log/StdoutLogger.hpp"
+#include "GlogLogger.hpp"
+#include "StdoutLogger.hpp"
 
 namespace mm {
 

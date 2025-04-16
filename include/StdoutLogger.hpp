@@ -24,7 +24,7 @@
 #ifndef INCLUDE_COMMON_LOG_STDOUTLOGGER_HPP_
 #define INCLUDE_COMMON_LOG_STDOUTLOGGER_HPP_
 
-#include "log/ILogger.hpp"
+#include "ILogger.hpp"
 
 namespace mm {
 
