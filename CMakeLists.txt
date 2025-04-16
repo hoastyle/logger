@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
 # Options
 option(MM_ENABLE_LOGGING "Enable logging functionality" ON)
 option(MM_ENABLE_DEBUG "Enable debug logging" OFF)
@@ -32,14 +36,7 @@ include_directories(
 find_package(Threads REQUIRED)
 find_package(glog REQUIRED)
 
-# Library sources
-set(MMLOGGER_SOURCES
-    src/StdoutLogger.cpp
-    src/GlogLogger.cpp
-    src/LoggerFactory.cpp
-    src/LoggerManager.cpp
-    src/Log.cpp
-)
+file(GLOB_RECURSE MMLOGGER_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 # Library headers
 file(GLOB_RECURSE MMLOGGER_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp")

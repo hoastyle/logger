@@ -25,6 +25,7 @@
 
 #include "GlogLogger.hpp"
 #include "StdoutLogger.hpp"
+#include "OptimizedGlogLogger.hpp"
 
 namespace mm {
 
@@ -43,6 +44,17 @@ ILogger* LoggerFactory::createLogger(const LogConfig& config) {
       logger = new (std::nothrow) GlogLogger(config.appId_,
           config.logLevelToStderr_, config.logLevelToFile_, config.logToFile_,
           config.logFilePath_, config.logDebugSwitch_);
+      break;
+    }
+    case detail::LogSinkType::LogSinkType_OptimizedGLog: {
+      // Create the optimized logger with performance settings
+      logger = new (std::nothrow)
+          OptimizedGlogLogger(config.appId_, config.logLevelToStderr_,
+              config.logLevelToFile_, config.logToFile_, config.logFilePath_,
+              config.logDebugSwitch_, config.optimizationConfig_.batchSize,
+              config.optimizationConfig_.queueCapacity,
+              config.optimizationConfig_.numWorkers,
+              config.optimizationConfig_.poolSize);
       break;
     }
     default: break;

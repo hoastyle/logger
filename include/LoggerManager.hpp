@@ -38,79 +38,79 @@ class ILogger;
 class ILoggerFactory;
 
 class LoggerManager {
-public:
-    static LoggerManager& instance() {
-        static LoggerManager instance;
-        return instance;
+ public:
+  static LoggerManager& instance() {
+    static LoggerManager instance;
+    return instance;
+  }
+
+  int setup(int argc, char* argv[]) noexcept;
+  int teardown() noexcept;
+  int setupLogger() noexcept;
+
+  void Start() noexcept;
+
+  inline const LogConfig& config() const noexcept { return config_; }
+  inline LoggerManagerPid pid() const noexcept { return pid_; }
+
+ private:
+  // private construct function, prohibit create instance from outside
+  LoggerManager() noexcept;
+
+  // prohibit copy & move
+  LoggerManager(const LoggerManager&) = delete;
+  LoggerManager& operator=(const LoggerManager&) = delete;
+  LoggerManager(LoggerManager&&)                 = delete;
+  LoggerManager& operator=(LoggerManager&&) = delete;
+
+  void initCmdLineFlags(const char* appId) noexcept;
+  int parseCmdLineFlags(int argc, char* argv[]) noexcept;
+  void checkLogConfig() noexcept;
+  detail::LogLevel transCmdLevelToLogLevel(const char* cmdLevel) noexcept;
+  detail::LogLevelCfg convertLogLevel() noexcept;
+  void outputLog(const detail::LogLevel lvl, const char* const msg,
+      const std::size_t len) noexcept;
+
+  inline void logVerbose(const char* msg, const std::size_t len) noexcept {
+    if (logger_) {
+      logger_->logVerbose(msg, len);
     }
+  }
 
-    int setup(int argc, char* argv[]) noexcept;
-    int teardown() noexcept;
-    int setupLogger() noexcept;
-
-    void Start() noexcept;
-
-    inline const LogConfig& config() const noexcept { return config_; }
-    inline LoggerManagerPid pid() const noexcept { return pid_; }
-
-private:
-    // private construct function, prohibit create instance from outside
-    LoggerManager() noexcept;
-
-    // prohibit copy & move
-    LoggerManager(const LoggerManager&) = delete;
-    LoggerManager& operator=(const LoggerManager&) = delete;
-    LoggerManager(LoggerManager&&) = delete;
-    LoggerManager& operator=(LoggerManager&&) = delete;
-
-    void initCmdLineFlags(const char* appId) noexcept;
-    int parseCmdLineFlags(int argc, char* argv[]) noexcept;
-    void checkLogConfig() noexcept;
-    detail::LogLevel transCmdLevelToLogLevel(const char* cmdLevel) noexcept;
-    detail::LogLevelCfg convertLogLevel() noexcept;
-    void outputLog(const detail::LogLevel lvl, const char* const msg,
-        const std::size_t len) noexcept;
-
-    inline void logVerbose(const char* msg, const std::size_t len) noexcept {
-        if (logger_) {
-            logger_->logVerbose(msg, len);
-        }
+  inline void logDebug(const char* msg, const std::size_t len) noexcept {
+    if (logger_) {
+      logger_->logDebug(msg, len);
     }
+  }
 
-    inline void logDebug(const char* msg, const std::size_t len) noexcept {
-        if (logger_) {
-            logger_->logDebug(msg, len);
-        }
+  inline void logInfo(const char* msg, const std::size_t len) noexcept {
+    if (logger_) {
+      logger_->logInfo(msg, len);
     }
+  }
 
-    inline void logInfo(const char* msg, const std::size_t len) noexcept {
-        if (logger_) {
-            logger_->logInfo(msg, len);
-        }
+  inline void logWarn(const char* msg, const std::size_t len) noexcept {
+    if (logger_) {
+      logger_->logWarn(msg, len);
     }
+  }
 
-    inline void logWarn(const char* msg, const std::size_t len) noexcept {
-        if (logger_) {
-            logger_->logWarn(msg, len);
-        }
+  inline void logError(const char* msg, const std::size_t len) noexcept {
+    if (logger_) {
+      logger_->logError(msg, len);
     }
+  }
 
-    inline void logError(const char* msg, const std::size_t len) noexcept {
-        if (logger_) {
-            logger_->logError(msg, len);
-        }
+  inline void logFatal(const char* msg, const std::size_t len) noexcept {
+    if (logger_) {
+      logger_->logFatal(msg, len);
     }
+  }
 
-    inline void logFatal(const char* msg, const std::size_t len) noexcept {
-        if (logger_) {
-            logger_->logFatal(msg, len);
-        }
-    }
-
-    LoggerManagerPid pid_;
-    LogConfig config_;
-    ILogger* logger_;
-    ILoggerFactory* factory_;
+  LoggerManagerPid pid_;
+  LogConfig config_;
+  ILogger* logger_;
+  ILoggerFactory* factory_;
 };
 
 }  // namespace mm

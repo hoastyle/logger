@@ -28,6 +28,8 @@
 
 namespace mm {
 
+const int GLOG_OVERDUE_DAY = 14;
+
 class ILogger {
  public:
   ILogger() noexcept = default;

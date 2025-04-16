@@ -24,6 +24,6 @@ namespace mm {
 #define MM_STATUS_ENOENT 5
 #endif
 
-} // namespace mm
+}  // namespace mm
 
-#endif // LOGGER_STATUS_HPP
+#endif  // LOGGER_STATUS_HPP

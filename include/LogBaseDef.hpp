@@ -60,6 +60,7 @@ enum LogSinkType : std::uint8_t {
   LogSinkType_None = 0u,
   LogSinkType_Stdout,
   LogSinkType_GLog,
+  LogSinkType_OptimizedGLog,
 };
 
 using LogCallback = std::function<void(
@@ -72,6 +73,18 @@ using LogDebugSwitch   = bool;
 using LogFilePath      = std::string;
 using LoggerManagerPid = pid_t;
 
+// Add additional configuration options for OptimizedGlogLogger
+struct LoggerOptimizationConfig {
+  LoggerOptimizationConfig() noexcept
+      : batchSize(100), queueCapacity(10000), numWorkers(2), poolSize(10000) {}
+
+  size_t batchSize;      // Number of messages to process in a batch
+  size_t queueCapacity;  // Maximum queue size before dropping messages
+  size_t numWorkers;     // Number of worker threads
+  size_t poolSize;       // Size of the memory pool
+};
+
+// Update LogConfig to include optimization settings
 struct LogConfig {
   LogConfig() noexcept
       : appId_(),
@@ -79,7 +92,8 @@ struct LogConfig {
         logLevelToFile_(detail::LogLevel_NoLog),
         logSinkType_(detail::LogSinkType_Stdout),
         logToFile_(false),
-        logFilePath_() {}
+        logFilePath_(),
+        optimizationConfig_() {}
 
   virtual ~LogConfig() = default;
 
@@ -90,6 +104,7 @@ struct LogConfig {
   mm::LogToFile logToFile_;
   mm::LogFilePath logFilePath_;
   mm::LogDebugSwitch logDebugSwitch_;
+  LoggerOptimizationConfig optimizationConfig_;  // Add this field
 };
 
 }  // namespace mm

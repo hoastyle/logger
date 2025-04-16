@@ -25,17 +25,17 @@
 #define INCLUDE_COMMON_LOG_DISALLOWCOPY_HPP_
 
 #define MM_DISALLOW_COPY_AND_MOVE(x) \
-  x(const x&)            = delete;   \
-  x(x&&)                 = delete;   \
+  x(const x&) = delete;              \
+  x(x&&)      = delete;              \
   x& operator=(const x&) = delete;   \
-  x& operator=(x&&)      = delete;
+  x& operator=(x&&) = delete;
 
-#define MM_DISALLOW_COPY_ONLY(x)   \
-  x(const x&)            = delete; \
+#define MM_DISALLOW_COPY_ONLY(x) \
+  x(const x&) = delete;          \
   x& operator=(const x&) = delete;
 
 #define MM_DISALLOW_MOVE_ONLY(x) \
-  x(x&&)            = delete;    \
+  x(x&&)     = delete;           \
   x& operator=(x&&) = delete;
 
 #endif  // INCLUDE_COMMON_LOG_DISALLOWCOPY_HPP_

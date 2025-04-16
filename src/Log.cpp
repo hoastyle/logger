@@ -117,7 +117,8 @@ void outputLog(const detail::LogLevel lvl, const char* const filename,
           localtime(&tv.tv_sec));
 
       n = std::snprintf(buf + offset, static_cast<std::size_t>(len),
-          "%s.%03d %05ld", timebuf, (int)(tv.tv_usec / 1000), static_cast<long int>(gettid()));
+          "%s.%03d %05ld", timebuf, (int)(tv.tv_usec / 1000),
+          static_cast<long int>(gettid()));
 
       if (0 > n) {
         /* there is an error occurred std::snprintf(). */
@@ -328,6 +329,8 @@ std::string convertOutputLogToStr(const detail::LogLevel lvl,
 
 }  // namespace detail
 
+// Update usage function in Log.cpp to include new options
+
 void usage(int ecode) noexcept {
   fprintf(stderr,
       "mCrane [options][parameter]: description\n"
@@ -339,9 +342,18 @@ void usage(int ecode) noexcept {
       "  [--filepath]: set log output file path\n"
       "  [--help|-h|-?]: check cmdline parameters options\n"
       "  [--sim]: options for open simulation with path\n"
-      "  [--sinktype]=<Stdout|GLog>: options for logging protocol\n"
+      "  [--sinktype]=<Stdout|GLog|OptimizedGLog>: options for logging "
+      "protocol\n"
       "  [--toFile]=<verbose|debug|info|warn|error|fatal>: log level\n"
-      "  [--toTerm]=<verbose|debug|info|warn|error|fatal>: log level\n");
+      "  [--toTerm]=<verbose|debug|info|warn|error|fatal>: log level\n"
+      "\n"
+      "  OptimizedGLog specific options:\n"
+      "  [--batchSize]=<number>: number of messages to process in a batch "
+      "(default: 100)\n"
+      "  [--queueCapacity]=<number>: maximum queue size before dropping "
+      "messages (default: 10000)\n"
+      "  [--numWorkers]=<number>: number of worker threads (default: 2)\n"
+      "  [--poolSize]=<number>: size of the memory pool (default: 10000)\n");
   exit(ecode);
 }
 

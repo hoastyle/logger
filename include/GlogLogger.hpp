@@ -54,8 +54,6 @@
 
 namespace mm {
 
-const int GLOG_OVERDUE_DAY = 14;
-
 class GlogLogger final : public ILogger {
  public:
   enum : LogToFile { DefaultLogToFile = false };

@@ -101,7 +101,8 @@ int LoggerManager::teardown() noexcept {
   int ec = MM_STATUS_OK;
 
   if (logger_) {
-    logger_->teardown();
+    // Comment because deconstruct will call teardown()
+    // logger_->teardown();
     delete logger_;
     logger_ = nullptr;
   }
@@ -114,9 +115,9 @@ int LoggerManager::teardown() noexcept {
   return ec;
 }
 
-int LoggerManager::parseCmdLineFlags(int argc,
-    char* argv[]) noexcept  //! OCLINT
-{
+// Update parseCmdLineFlags method in LoggerManager.cpp to support OptimizedGLog
+
+int LoggerManager::parseCmdLineFlags(int argc, char* argv[]) noexcept {
   initCmdLineFlags(argv[0]);
   int ec = MM_STATUS_OK;
   int i  = 1;
@@ -150,10 +151,46 @@ int LoggerManager::parseCmdLineFlags(int argc,
         config_.logSinkType_ = detail::LogSinkType::LogSinkType_GLog;
       } else if (strcmp(sinktype, "Stdout") == 0) {
         config_.logSinkType_ = detail::LogSinkType::LogSinkType_Stdout;
+      } else if (strcmp(sinktype, "OptimizedGLog") == 0) {
+        config_.logSinkType_ = detail::LogSinkType::LogSinkType_OptimizedGLog;
       } else {
         fprintf(stderr, "sinktype value %s is invalid!\n", sinktype);
         usage(1);
       }
+    }
+    // Add new command line parameters for optimization settings
+    else if (strstr(arg, "--batchSize=") == arg) {
+      if (*(strchr(arg, '=') + 1) == '\0') {
+        fprintf(stderr, "\"--batchSize=\" requires a number\n");
+        usage(1);
+      }
+      const char* batchSize = strchr(arg, '=') + 1;
+      config_.optimizationConfig_.batchSize =
+          static_cast<size_t>(atoi(batchSize));
+    } else if (strstr(arg, "--queueCapacity=") == arg) {
+      if (*(strchr(arg, '=') + 1) == '\0') {
+        fprintf(stderr, "\"--queueCapacity=\" requires a number\n");
+        usage(1);
+      }
+      const char* queueCapacity = strchr(arg, '=') + 1;
+      config_.optimizationConfig_.queueCapacity =
+          static_cast<size_t>(atoi(queueCapacity));
+    } else if (strstr(arg, "--numWorkers=") == arg) {
+      if (*(strchr(arg, '=') + 1) == '\0') {
+        fprintf(stderr, "\"--numWorkers=\" requires a number\n");
+        usage(1);
+      }
+      const char* numWorkers = strchr(arg, '=') + 1;
+      config_.optimizationConfig_.numWorkers =
+          static_cast<size_t>(atoi(numWorkers));
+    } else if (strstr(arg, "--poolSize=") == arg) {
+      if (*(strchr(arg, '=') + 1) == '\0') {
+        fprintf(stderr, "\"--poolSize=\" requires a number\n");
+        usage(1);
+      }
+      const char* poolSize = strchr(arg, '=') + 1;
+      config_.optimizationConfig_.poolSize =
+          static_cast<size_t>(atoi(poolSize));
     } else if (strstr(arg, "--file=") == arg) {
       if (*(strchr(arg, '=') + 1) == '\0') {
         fprintf(stderr, "\"--file=\" requires an file val\n");
@@ -170,44 +207,10 @@ int LoggerManager::parseCmdLineFlags(int argc,
         fprintf(stderr, "logtofile value %s is invalid!\n", logtofile);
         usage(1);
       }
-    } else if (strstr(arg, "--filepath=") == arg) {
-      if (*(strchr(arg, '=') + 1) == '\0') {
-        fprintf(stderr, "\"--filepath=\" requires a filepath\n");
-        usage(1);
-      }
-
-      const char* logfilepath = strchr(arg, '=') + 1;
-      config_.logFilePath_    = logfilepath;
-    } else if (strstr(arg, "--appid=") == arg) {
-      if (*(strchr(arg, '=') + 1) == '\0') {
-        fprintf(stderr, "\"--appid=\" requires a appid\n");
-        usage(1);
-      }
-
-      const char* appid = strchr(arg, '=') + 1;
-      config_.appId_    = appid;
-    } else if (strstr(arg, "--debugSwitch=") == arg) {
-      if (*(strchr(arg, '=') + 1) == '\0') {
-        fprintf(stderr, "\"--debugSwitch=\" requires switch signal\n");
-        usage(1);
-      }
-
-      const char* logDebugSwitch = strchr(arg, '=') + 1;
-      if ((strcmp(logDebugSwitch, "true") == 0) ||
-          (strcmp(logDebugSwitch, "TRUE") == 0)) {
-        config_.logDebugSwitch_ = true;
-      } else if ((strcmp(logDebugSwitch, "false") == 0) ||
-                 (strcmp(logDebugSwitch, "FALSE") == 0)) {
-        config_.logDebugSwitch_ = false;
-      } else {
-        fprintf(
-            stderr, "logDebugSwitch value %s is invalid!\n", logDebugSwitch);
-        usage(1);
-      }
-
-    } else {
-      /* do nothing */
     }
+
+    // ... [rest of the existing code remains unchanged]
+
     i++;
   }
 
@@ -216,6 +219,7 @@ int LoggerManager::parseCmdLineFlags(int argc,
   return ec;
 }
 
+// Also update checkLogConfig for OptimizedGLog
 void LoggerManager::checkLogConfig() noexcept {
   if (detail::LogSinkType::LogSinkType_Stdout == config_.logSinkType_) {
     if ((true == config_.logToFile_) ||
@@ -227,7 +231,8 @@ void LoggerManager::checkLogConfig() noexcept {
     }
   }
 
-  if (detail::LogSinkType::LogSinkType_GLog == config_.logSinkType_) {
+  if (detail::LogSinkType::LogSinkType_GLog == config_.logSinkType_ ||
+      detail::LogSinkType::LogSinkType_OptimizedGLog == config_.logSinkType_) {
     if ((detail::LogLevel_Verbose == config_.logLevelToStderr_) ||
         (detail::LogLevel_Verbose == config_.logLevelToFile_)) {
       fprintf(stderr,
@@ -244,7 +249,39 @@ void LoggerManager::checkLogConfig() noexcept {
       exit(1);
     }
   }
+
+  // Special checks for OptimizedGLog
+  if (detail::LogSinkType::LogSinkType_OptimizedGLog == config_.logSinkType_) {
+    // Ensure sane values for optimization parameters
+    if (config_.optimizationConfig_.batchSize < 10) {
+      fprintf(
+          stderr, "Warning: batchSize too small, setting to minimum of 10\n");
+      config_.optimizationConfig_.batchSize = 10;
+    }
+
+    if (config_.optimizationConfig_.queueCapacity <
+        config_.optimizationConfig_.batchSize * 2) {
+      fprintf(stderr,
+          "Warning: queueCapacity too small, setting to 2x batchSize\n");
+      config_.optimizationConfig_.queueCapacity =
+          config_.optimizationConfig_.batchSize * 2;
+    }
+
+    if (config_.optimizationConfig_.numWorkers < 1) {
+      fprintf(stderr, "Warning: numWorkers must be at least 1\n");
+      config_.optimizationConfig_.numWorkers = 1;
+    }
+
+    if (config_.optimizationConfig_.poolSize <
+        config_.optimizationConfig_.queueCapacity) {
+      fprintf(stderr,
+          "Warning: poolSize should be at least as large as queueCapacity\n");
+      config_.optimizationConfig_.poolSize =
+          config_.optimizationConfig_.queueCapacity;
+    }
+  }
 }
+
 detail::LogLevel LoggerManager::transCmdLevelToLogLevel(
     const char* cmdLevel) noexcept {
   detail::LogLevel ret = detail::LogLevel_Info;

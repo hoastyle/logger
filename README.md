@@ -13,8 +13,8 @@ MMLogger is a C++ logging library that provides flexible logging capabilities wi
 ## Basic Usage
 
 ```cpp
-#include <mm/Log.hpp>
-#include <mm/LoggerManager.hpp>
+#include <Log.hpp>
+#include <LoggerManager.hpp>
 
 int main(int argc, char* argv[]) {
     // Initialize the logger
