@@ -16,6 +16,7 @@ option(MM_ENABLE_DEBUG "Enable debug logging" OFF)
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(MM_BUILD_EXAMPLES "Build example applications" OFF)
 option(MM_BUILD_TESTS "Build test applications" OFF)
+option(MM_BUILD_BENCHMARKS "Build benchmark applications" OFF) # 新增的选项
 
 # Define compile flags
 if(MM_ENABLE_LOGGING)
@@ -113,4 +114,9 @@ endif()
 # Build tests if requested
 if(MM_BUILD_TESTS)
     add_subdirectory(tests)
+endif()
+
+# Build benchmarks if requested
+if(MM_BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
 endif()
