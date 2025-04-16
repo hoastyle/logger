@@ -42,17 +42,7 @@ set(MMLOGGER_SOURCES
 )
 
 # Library headers
-set(MMLOGGER_HEADERS
-    include/DisallowCopy.hpp
-    include/GlogLogger.hpp
-    include/ILogger.hpp
-    include/ILoggerFactory.hpp
-    include/Log.hpp
-    include/LogBaseDef.hpp
-    include/LoggerFactory.hpp
-    include/LoggerManager.hpp
-    include/StdoutLogger.hpp
-)
+file(GLOB_RECURSE MMLOGGER_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp")
 
 # Create library
 add_library(MMLogger ${MMLOGGER_SOURCES})
