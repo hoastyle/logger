@@ -43,7 +43,15 @@ void LoggerManager::initCmdLineFlags(const char* appId) noexcept {
   if (!appId) {
     config_.appId_ = "";
   } else {
-    config_.appId_ = appId;
+    // Extract program name without path
+    const char* program = strrchr(appId, '/');
+    if (program) {
+      // Skip the '/' character
+      config_.appId_ = program + 1;
+    } else {
+      // No path separator found, use as is
+      config_.appId_ = appId;
+    }
   }
 
   config_.logLevelToStderr_ = detail::LogLevel_Debug;
@@ -272,6 +280,73 @@ int LoggerManager::parseCmdLineFlags(int argc, char* argv[]) noexcept {
 
 // Also update checkLogConfig for OptimizedGLog
 void LoggerManager::checkLogConfig() noexcept {
+  // Print all configuration values
+  fprintf(stderr, "--------- Logger Configuration ---------\n");
+  fprintf(stderr, "appId_: %s\n", config_.appId_.c_str());
+
+  // Print log level to stderr
+  fprintf(stderr, "logLevelToStderr_: ");
+  switch (config_.logLevelToStderr_) {
+    case detail::LogLevel_Verbose: fprintf(stderr, "Verbose\n"); break;
+    case detail::LogLevel_Debug: fprintf(stderr, "Debug\n"); break;
+    case detail::LogLevel_Info: fprintf(stderr, "Info\n"); break;
+    case detail::LogLevel_Warn: fprintf(stderr, "Warn\n"); break;
+    case detail::LogLevel_Error: fprintf(stderr, "Error\n"); break;
+    case detail::LogLevel_Fatal: fprintf(stderr, "Fatal\n"); break;
+    case detail::LogLevel_NoLog: fprintf(stderr, "NoLog\n"); break;
+    default:
+      fprintf(stderr, "Unknown (%d)\n", config_.logLevelToStderr_);
+      break;
+  }
+
+  // Print log level to file
+  fprintf(stderr, "logLevelToFile_: ");
+  switch (config_.logLevelToFile_) {
+    case detail::LogLevel_Verbose: fprintf(stderr, "Verbose\n"); break;
+    case detail::LogLevel_Debug: fprintf(stderr, "Debug\n"); break;
+    case detail::LogLevel_Info: fprintf(stderr, "Info\n"); break;
+    case detail::LogLevel_Warn: fprintf(stderr, "Warn\n"); break;
+    case detail::LogLevel_Error: fprintf(stderr, "Error\n"); break;
+    case detail::LogLevel_Fatal: fprintf(stderr, "Fatal\n"); break;
+    case detail::LogLevel_NoLog: fprintf(stderr, "NoLog\n"); break;
+    default: fprintf(stderr, "Unknown (%d)\n", config_.logLevelToFile_); break;
+  }
+
+  // Print log sink type
+  fprintf(stderr, "logSinkType_: ");
+  switch (config_.logSinkType_) {
+    case detail::LogSinkType_None: fprintf(stderr, "None\n"); break;
+    case detail::LogSinkType_Stdout: fprintf(stderr, "Stdout\n"); break;
+    case detail::LogSinkType_GLog: fprintf(stderr, "GLog\n"); break;
+    case detail::LogSinkType_OptimizedGLog:
+      fprintf(stderr, "OptimizedGLog\n");
+      break;
+    default: fprintf(stderr, "Unknown (%d)\n", config_.logSinkType_); break;
+  }
+
+  // Print file logging configuration
+  fprintf(stderr, "logToFile_: %s\n", config_.logToFile_ ? "true" : "false");
+  fprintf(stderr, "logFilePath_: %s\n", config_.logFilePath_.c_str());
+
+  // Print debug switch
+  fprintf(stderr, "logDebugSwitch_: %s\n",
+      config_.logDebugSwitch_ ? "true" : "false");
+
+  // Print console output option
+  fprintf(
+      stderr, "logToConsole_: %s\n", config_.logToConsole_ ? "true" : "false");
+
+  // Print OptimizedGLog-specific configuration
+  fprintf(stderr, "optimizationConfig_.batchSize: %zu\n",
+      config_.optimizationConfig_.batchSize);
+  fprintf(stderr, "optimizationConfig_.queueCapacity: %zu\n",
+      config_.optimizationConfig_.queueCapacity);
+  fprintf(stderr, "optimizationConfig_.numWorkers: %zu\n",
+      config_.optimizationConfig_.numWorkers);
+  fprintf(stderr, "optimizationConfig_.poolSize: %zu\n",
+      config_.optimizationConfig_.poolSize);
+  fprintf(stderr, "----------------------------------------\n");
+
   if (detail::LogSinkType::LogSinkType_Stdout == config_.logSinkType_) {
     if ((true == config_.logToFile_) ||
         (detail::LogLevel_NoLog != config_.logLevelToFile_) ||

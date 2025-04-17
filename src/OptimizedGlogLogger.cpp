@@ -179,9 +179,7 @@ int OptimizedGlogLogger::setup() {
           dirPath += '/';
         }
 
-        // Create log file prefix (directory + appId)
-        std::string filePrefix = dirPath + appId_;
-        printf("file prefix: %s\n", filePrefix.c_str());
+        std::string filePrefix = dirPath;
 
         // Define all possible log levels, in increasing severity
         const std::vector<std::pair<detail::LogLevel, int>> logLevelMap = {
@@ -196,17 +194,31 @@ int OptimizedGlogLogger::setup() {
           // If configured level is less than or equal to this level, enable
           // logging for this level
           if (logLevelToFile_ <= level) {
-            google::SetLogDestination(glogLevel, filePrefix.c_str());
+            std::string levelPrefix;
+            switch (glogLevel) {
+              case google::GLOG_INFO: levelPrefix = filePrefix + "INFO."; break;
+              case google::GLOG_WARNING:
+                levelPrefix = filePrefix + "WARNING.";
+                break;
+              case google::GLOG_ERROR:
+                levelPrefix = filePrefix + "ERROR.";
+                break;
+              case google::GLOG_FATAL:
+                levelPrefix = filePrefix + "FATAL.";
+                break;
+              default: levelPrefix = filePrefix; break;
+            }
+            google::SetLogDestination(glogLevel, levelPrefix.c_str());
           } else {
             // For unwanted levels, set empty string to disable it
             google::SetLogDestination(glogLevel, "");
           }
         }
         // Set log symlinks
-        google::SetLogSymlink(google::GLOG_INFO, "info");
-        google::SetLogSymlink(google::GLOG_WARNING, "warning");
-        google::SetLogSymlink(google::GLOG_ERROR, "error");
-        google::SetLogSymlink(google::GLOG_FATAL, "fatal");
+        google::SetLogSymlink(google::GLOG_INFO, appId_.c_str());
+        google::SetLogSymlink(google::GLOG_WARNING, appId_.c_str());
+        google::SetLogSymlink(google::GLOG_ERROR, appId_.c_str());
+        google::SetLogSymlink(google::GLOG_FATAL, appId_.c_str());
       }
     } else {
       // If file logging is not enabled, explicitly disable all file output

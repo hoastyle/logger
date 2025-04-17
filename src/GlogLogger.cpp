@@ -81,16 +81,66 @@ int GlogLogger::setup() {
 
   /* set log to file */
   if (logToFile_) {
-    if (createAbsDirectory(logFilePath_)) {
-      for (auto logLevel = logLevelToFile_;
-           logLevel <= detail::LogLevel::LogLevel_Fatal;
-           logLevel = detail::LogLevel(logLevel << 1))
-        google::SetLogDestination(
-            convertLogLevel(logLevel), logFilePath_.c_str());
+    if (logLevelToFile_ == detail::LogLevel_NoLog) {
+      std::fprintf(
+          stderr, "Warning: File logging specified but log level is NoLog\n");
     } else {
-      ec = MM_STATUS_ENOENT;
-      LOG(ERROR) << "Failed to create log file: " << logFilePath_;
+      std::string dirPath = logFilePath_;
+
+      // Ensure directory exists
+      if (!createAbsDirectory(dirPath)) {
+        std::fprintf(stderr, "Error: Failed to create log directory: %s\n",
+            dirPath.c_str());
+        return MM_STATUS_ENOENT;
+      }
+
+      // Ensure path ends with separator
+      if (!dirPath.empty() && dirPath.back() != '/') {
+        dirPath += '/';
+      }
+
+      std::string filePrefix = dirPath;
+      // Define all possible log levels, in increasing severity
+      const std::vector<std::pair<detail::LogLevel, int>> logLevelMap = {
+          {detail::LogLevel_Debug, google::GLOG_INFO},
+          {detail::LogLevel_Info, google::GLOG_INFO},
+          {detail::LogLevel_Warn, google::GLOG_WARNING},
+          {detail::LogLevel_Error, google::GLOG_ERROR},
+          {detail::LogLevel_Fatal, google::GLOG_FATAL}};
+
+      // Set log destination for each level
+      for (const auto& [level, glogLevel] : logLevelMap) {
+        // If configured level is less than or equal to this level, enable
+        // logging for this level
+        if (logLevelToFile_ <= level) {
+          std::string levelPrefix;
+          switch (glogLevel) {
+            case google::GLOG_INFO: levelPrefix = filePrefix + "INFO."; break;
+            case google::GLOG_WARNING:
+              levelPrefix = filePrefix + "WARNING.";
+              break;
+            case google::GLOG_ERROR: levelPrefix = filePrefix + "ERROR."; break;
+            case google::GLOG_FATAL: levelPrefix = filePrefix + "FATAL."; break;
+            default: levelPrefix = filePrefix; break;
+          }
+          google::SetLogDestination(glogLevel, levelPrefix.c_str());
+        } else {
+          // For unwanted levels, set empty string to disable it
+          google::SetLogDestination(glogLevel, "");
+        }
+      }
+      // Set log symlinks
+      google::SetLogSymlink(google::GLOG_INFO, appId_.c_str());
+      google::SetLogSymlink(google::GLOG_WARNING, appId_.c_str());
+      google::SetLogSymlink(google::GLOG_ERROR, appId_.c_str());
+      google::SetLogSymlink(google::GLOG_FATAL, appId_.c_str());
     }
+  } else {
+    // If file logging is not enabled, explicitly disable all file output
+    google::SetLogDestination(google::GLOG_INFO, "");
+    google::SetLogDestination(google::GLOG_WARNING, "");
+    google::SetLogDestination(google::GLOG_ERROR, "");
+    google::SetLogDestination(google::GLOG_FATAL, "");
   }
 
   return ec;
