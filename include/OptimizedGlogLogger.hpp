@@ -47,6 +47,7 @@ class OptimizedGlogLogger final : public ILogger {
     const char* msg;  // Points to memory in the pool
     std::size_t len;
     LogMessage* next;  // For memory pool linked list
+    size_t bufferIndex;
   };
 
   /**

@@ -14,75 +14,68 @@
 
 namespace mm {
 
-// Implementation of LogMessagePool
 OptimizedGlogLogger::LogMessagePool::LogMessagePool(
     size_t poolSize, size_t msgBufferSize)
     : freeList_(nullptr), msgBufferSize_(msgBufferSize) {
-  // Allocate message objects
   messages_.reserve(poolSize);
-  for (size_t i = 0; i < poolSize; ++i) {
-    LogMessage* msg = new LogMessage{};
-    msg->next       = freeList_;
-    freeList_       = msg;
-    messages_.push_back(msg);
-  }
-
-  // Allocate buffers for message content
   buffers_.reserve(poolSize);
+
   for (size_t i = 0; i < poolSize; ++i) {
     char* buffer = new char[msgBufferSize];
     buffers_.push_back(buffer);
+
+    LogMessage* msg  = new LogMessage{};
+    msg->bufferIndex = i;
+    msg->next        = freeList_;
+    freeList_        = msg;
+    messages_.push_back(msg);
   }
 }
 
 OptimizedGlogLogger::LogMessagePool::~LogMessagePool() {
-  // Free all message objects
   for (auto msg : messages_) {
     delete msg;
   }
   messages_.clear();
 
-  // Free all buffers
   for (auto buffer : buffers_) {
     delete[] buffer;
   }
   buffers_.clear();
 }
 
+// 修改获取消息的方法
 OptimizedGlogLogger::LogMessage*
 OptimizedGlogLogger::LogMessagePool::acquireLogMessage(
     const char* msg, size_t len) {
   std::lock_guard<std::mutex> lock(poolMutex_);
 
   if (freeList_ == nullptr) {
-    // Pool exhausted, return nullptr
     return nullptr;
   }
 
-  // Get a message from the free list
   LogMessage* logMsg = freeList_;
   freeList_          = freeList_->next;
 
-  // Find an available buffer
-  size_t bufferIndex = logMsg - messages_[0];
-  if (bufferIndex < buffers_.size()) {
-    char* buffer = buffers_[bufferIndex];
+  size_t bufferIndex = logMsg->bufferIndex;
 
-    // Copy message content to buffer
-    size_t copyLen = std::min(len, msgBufferSize_ - 1);
-    std::memcpy(buffer, msg, copyLen);
-    buffer[copyLen] = '\0';
-
-    // Setup the log message
-    logMsg->msg  = buffer;
-    logMsg->len  = copyLen;
-    logMsg->next = nullptr;
-
-    return logMsg;
+  if (bufferIndex >= buffers_.size()) {
+    logMsg->next = freeList_;
+    freeList_    = logMsg;
+    return nullptr;
   }
 
-  // Should never reach here if buffer and message pools are correctly sized
-  return nullptr;
+  char* buffer = buffers_[bufferIndex];
+
+  size_t copyLen = std::min(len, msgBufferSize_ - 1);
+  std::memcpy(buffer, msg, copyLen);
+  buffer[copyLen] = '\0';
+
+  logMsg->msg  = buffer;
+  logMsg->len  = copyLen;
+  logMsg->next = nullptr;
+
+  return logMsg;
 }
 
 void OptimizedGlogLogger::LogMessagePool::releaseLogMessage(
@@ -91,7 +84,6 @@ void OptimizedGlogLogger::LogMessagePool::releaseLogMessage(
 
   std::lock_guard<std::mutex> lock(poolMutex_);
 
-  // Return to free list
   logMsg->next = freeList_;
   freeList_    = logMsg;
 }
@@ -145,12 +137,20 @@ int OptimizedGlogLogger::setup() {
   google::EnableLogCleaner(GLOG_OVERDUE_DAY);
 
   if (logToConsole_) {
-    google::SetStderrLogging(convertLogLevel(logLevelToStderr_));
+    // default to file
+    FLAGS_logtostderr = false;
+    // output to console & file
+    FLAGS_alsologtostderr = true;
+    // control level to console
+    FLAGS_stderrthreshold = convertLogLevel(logLevelToStderr_);
+    // enable color output
     FLAGS_colorlogtostderr = true;
   } else {
-    // Disable log to stderr
-    // Set to level higher than FATAL to disable console output
-    google::SetStderrLogging(google::GLOG_FATAL + 1);
+    // disable console output
+    FLAGS_logtostderr = false;
+    // disable output to console & file at the same time
+    FLAGS_alsologtostderr = false;
+    FLAGS_stderrthreshold = google::GLOG_FATAL;
   }
 
   // Performance optimizations for glog
