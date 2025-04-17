@@ -130,58 +130,106 @@ OptimizedGlogLogger::~OptimizedGlogLogger() { teardown(); }
 int OptimizedGlogLogger::setup() {
   int ec = MM_STATUS_OK;
 
-  // Initialize Google logging
-  google::InitGoogleLogging(appId_.c_str());
+  try {
+    // Initialize Google logging
+    google::InitGoogleLogging(appId_.c_str());
 
-  // Configure glog for optimal performance
-  google::EnableLogCleaner(GLOG_OVERDUE_DAY);
+    // Configure glog for optimal performance
+    google::EnableLogCleaner(GLOG_OVERDUE_DAY);
 
-  if (logToConsole_) {
-    // default to file
-    FLAGS_logtostderr = false;
-    // output to console & file
-    FLAGS_alsologtostderr = true;
-    // control level to console
-    FLAGS_stderrthreshold = convertLogLevel(logLevelToStderr_);
-    // enable color output
-    FLAGS_colorlogtostderr = true;
-  } else {
-    // disable console output
-    FLAGS_logtostderr = false;
-    // disable output to console & file at the same time
-    FLAGS_alsologtostderr = false;
-    FLAGS_stderrthreshold = google::GLOG_FATAL;
-  }
+    if (logToConsole_) {
+      // default to file
+      FLAGS_logtostderr = false;
+      // output to console & file
+      FLAGS_alsologtostderr = true;
+      // control level to console
+      FLAGS_stderrthreshold = convertLogLevel(logLevelToStderr_);
+      // enable color output
+      FLAGS_colorlogtostderr = true;
+    } else {
+      // disable console output
+      FLAGS_logtostderr = false;
+      // disable output to console & file at the same time
+      FLAGS_alsologtostderr = false;
+      FLAGS_stderrthreshold = google::GLOG_FATAL;
+    }
 
-  // Performance optimizations for glog
-  FLAGS_logbufsecs                = 0;     // Flush log file after each write
-  FLAGS_max_log_size              = 1024;  // 1GB per log file
-  FLAGS_stop_logging_if_full_disk = true;
+    // Performance optimizations for glog
+    FLAGS_logbufsecs                = 0;     // Flush log file after each write
+    FLAGS_max_log_size              = 1024;  // 1GB per log file
+    FLAGS_stop_logging_if_full_disk = true;
 
-  // Set log file destination if needed
-  if (logToFile_) {
-    if (createAbsDirectory(logFilePath_)) {
-      for (auto logLevel = logLevelToFile_;
-           logLevel <= detail::LogLevel::LogLevel_Fatal;
-           logLevel = detail::LogLevel(logLevel << 1)) {
-        google::SetLogDestination(
-            convertLogLevel(logLevel), logFilePath_.c_str());
+    // Set log file destination if needed
+    if (logToFile_) {
+      if (logLevelToFile_ == detail::LogLevel_NoLog) {
+        std::fprintf(
+            stderr, "Warning: File logging specified but log level is NoLog\n");
+      } else {
+        std::string dirPath = logFilePath_;
+
+        // Ensure directory exists
+        if (!createAbsDirectory(dirPath)) {
+          std::fprintf(stderr, "Error: Failed to create log directory: %s\n",
+              dirPath.c_str());
+          return MM_STATUS_ENOENT;
+        }
+
+        // Ensure path ends with separator
+        if (!dirPath.empty() && dirPath.back() != '/') {
+          dirPath += '/';
+        }
+
+        // Create log file prefix (directory + appId)
+        std::string filePrefix = dirPath + appId_;
+        printf("file prefix: %s\n", filePrefix.c_str());
+
+        // Define all possible log levels, in increasing severity
+        const std::vector<std::pair<detail::LogLevel, int>> logLevelMap = {
+            {detail::LogLevel_Debug, google::GLOG_INFO},
+            {detail::LogLevel_Info, google::GLOG_INFO},
+            {detail::LogLevel_Warn, google::GLOG_WARNING},
+            {detail::LogLevel_Error, google::GLOG_ERROR},
+            {detail::LogLevel_Fatal, google::GLOG_FATAL}};
+
+        // Set log destination for each level
+        for (const auto& [level, glogLevel] : logLevelMap) {
+          // If configured level is less than or equal to this level, enable
+          // logging for this level
+          if (logLevelToFile_ <= level) {
+            google::SetLogDestination(glogLevel, filePrefix.c_str());
+          } else {
+            // For unwanted levels, set empty string to disable it
+            google::SetLogDestination(glogLevel, "");
+          }
+        }
+        // Set log symlinks
+        google::SetLogSymlink(google::GLOG_INFO, "info");
+        google::SetLogSymlink(google::GLOG_WARNING, "warning");
+        google::SetLogSymlink(google::GLOG_ERROR, "error");
+        google::SetLogSymlink(google::GLOG_FATAL, "fatal");
       }
     } else {
-      ec = MM_STATUS_ENOENT;
-      std::fprintf(
-          stderr, "Failed to create log directory: %s\n", logFilePath_.c_str());
-      return ec;
+      // If file logging is not enabled, explicitly disable all file output
+      google::SetLogDestination(google::GLOG_INFO, "");
+      google::SetLogDestination(google::GLOG_WARNING, "");
+      google::SetLogDestination(google::GLOG_ERROR, "");
+      google::SetLogDestination(google::GLOG_FATAL, "");
     }
-  }
+    // Start worker threads for async processing
+    shutdown_ = false;
+    for (size_t i = 0; i < numWorkers_; ++i) {
+      workers_.emplace_back(&OptimizedGlogLogger::workerThread, this);
+    }
 
-  // Start worker threads for async processing
-  shutdown_ = false;
-  for (size_t i = 0; i < numWorkers_; ++i) {
-    workers_.emplace_back(&OptimizedGlogLogger::workerThread, this);
+    return ec;
+  } catch (const std::exception& e) {
+    std::fprintf(stderr, "Log system initialization exception: %s\n", e.what());
+    return MM_STATUS_ERROR;
+  } catch (...) {
+    std::fprintf(stderr,
+        "Unknown exception occurred during log system initialization\n");
+    return MM_STATUS_ERROR;
   }
-
-  return ec;
 }
 
 int OptimizedGlogLogger::teardown() {
