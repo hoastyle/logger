@@ -31,61 +31,51 @@
 #include "cpp_color_fix.h"
 #include <random>
 
-// MMLogger头文件
 #include <Log.hpp>
 #include <LoggerManager.hpp>
 #include <LogBaseDef.hpp>
 
-// 全局原子计数器和同步原语
 std::atomic<uint64_t> g_totalLogsGenerated(0);
 std::atomic<bool> g_runBenchmark(false);
 std::mutex g_latencyMutex;
-std::vector<uint64_t> g_latencies;  // 纳秒级延迟测量
+std::vector<uint64_t> g_latencies;
 
-// 性能测试配置结构
 struct BenchmarkConfig {
-  // 测试标识
   std::string testId;
   std::string testName;
 
-  // 日志器配置
   std::string loggerType;  // "Stdout", "GLog", "OptimizedGLog"
   bool enableConsoleOutput;
   bool enableFileOutput;
   std::string logFilePath;
   std::string logLevel;  // "debug", "info", "warn", "error"
 
-  // 工作负载参数
   int numThreads;
   int logsPerThread;
   int logMessageSize;
-  int logRatePerSecond;  // 0表示最快速度
+  int logRatePerSecond;
 
-  // 日志级别分布
   double debugLogPercentage;
   double infoLogPercentage;
   double warnLogPercentage;
   double errorLogPercentage;
 
-  // OptimizedGLog特定参数
   int batchSize;
   int queueCapacity;
   int numWorkers;
   int poolSize;
 
-  // 测试执行参数
+  // test execute parameters
   int warmupSeconds;
   int testDurationSeconds;
   int cooldownSeconds;
   bool measureLatency;
   bool useRateLimit;
 
-  // 输出参数
   std::string outputFile;
   bool appendOutput;
   bool verboseOutput;
 
-  // 构造函数设置默认值
   BenchmarkConfig()
       : testId("benchmark"),
         testName("MMLogger性能测试"),
@@ -116,13 +106,12 @@ struct BenchmarkConfig {
         verboseOutput(true) {}
 };
 
-// 性能指标结构
 struct PerformanceMetrics {
-  // 吞吐量指标
+  // throughput KPI
   double logsPerSecond;
   double bytesPerSecond;
 
-  // 延迟指标（微秒）
+  // latency KPI (us)
   double avgLatency;
   double p50Latency;
   double p90Latency;
@@ -130,20 +119,20 @@ struct PerformanceMetrics {
   double p99Latency;
   double maxLatency;
 
-  // 资源使用
+  // resource usage
   double cpuUsagePercent;
   double memoryUsageMB;
   double diskWritesBytesPerSec;
-  double diskWritesMBPerSec;  // 磁盘写入 MB/s 形式
+  // disk io in MB/s
+  double diskWritesMBPerSec;
 
-  // OptimizedGLog状态指标
+  // OptimizedGLog stats
   uint64_t enqueuedCount;
   uint64_t processedCount;
   uint64_t droppedCount;
   uint64_t overflowCount;
   double queueUtilization;
 
-  // 构造函数初始化
   PerformanceMetrics()
       : logsPerSecond(0),
         bytesPerSecond(0),
@@ -164,7 +153,7 @@ struct PerformanceMetrics {
         queueUtilization(0) {}
 };
 
-// 高精度计时器类
+// high precision timer
 class Timer {
  private:
   std::chrono::high_resolution_clock::time_point startTime;
@@ -186,9 +175,7 @@ class Timer {
   }
 
   double elapsedSeconds() const { return elapsed().count() / 1e9; }
-
   double elapsedMilliseconds() const { return elapsed().count() / 1e6; }
-
   double elapsedMicroseconds() const { return elapsed().count() / 1e3; }
 };
 
@@ -349,12 +336,10 @@ std::string generateRandomContent(size_t size) {
 
 // 生成日志的线程函数
 void logGenerationThread(int threadId, const BenchmarkConfig& config) {
-  // 计算日志分布
   std::vector<double> logDistribution = {config.debugLogPercentage,
       config.infoLogPercentage, config.warnLogPercentage,
       config.errorLogPercentage};
 
-  // 归一化分布
   double sum = 0.0;
   for (double d : logDistribution) {
     sum += d;
@@ -364,7 +349,6 @@ void logGenerationThread(int threadId, const BenchmarkConfig& config) {
       d /= sum;
     }
   } else {
-    // 默认等分布
     for (double& d : logDistribution) {
       d = 0.25;
     }
@@ -539,16 +523,13 @@ void calculateLatencyPercentiles(
   metrics.maxLatency = sortedLatencies.back() / 1000.0;
 }
 
-// 获取系统信息
 std::string getSystemInfo() {
   std::string info;
 
-  // 操作系统信息
   char hostname[1024];
   gethostname(hostname, 1024);
   info += std::string("主机名: ") + hostname + "; ";
 
-  // CPU信息
   std::ifstream cpuinfo("/proc/cpuinfo");
   std::string line;
   int cpuCount = 0;
@@ -565,7 +546,6 @@ std::string getSystemInfo() {
 
   info += "CPU: " + cpuModel + " x" + std::to_string(cpuCount) + "; ";
 
-  // 内存信息
   std::ifstream meminfo("/proc/meminfo");
   std::string totalMem;
 
@@ -578,7 +558,6 @@ std::string getSystemInfo() {
 
   info += "内存: " + totalMem + "; ";
 
-  // 磁盘信息（简化版）
   struct statvfs diskStat;
   if (statvfs("/", &diskStat) == 0) {
     unsigned long long totalSpace = diskStat.f_frsize * diskStat.f_blocks;
@@ -968,9 +947,7 @@ bool parseArgs(int argc, char* argv[], BenchmarkConfig& config) {
   return true;
 }
 
-// 主函数
 int main(int argc, char* argv[]) {
-  // 解析配置
   BenchmarkConfig config;
   if (!parseArgs(argc, argv, config)) {
     return 1;
@@ -1022,9 +999,8 @@ int main(int argc, char* argv[]) {
     loggerArgs.push_back("--poolSize=" + std::to_string(config.poolSize));
   }
 
-  // 转换为C风格参数
   std::vector<char*> cArgs;
-  cArgs.push_back(argv[0]);  // 程序名
+  cArgs.push_back(argv[0]);
   std::vector<std::string> stringArgs(loggerArgs);
 
   for (auto& arg : stringArgs) {
@@ -1070,6 +1046,7 @@ int main(int argc, char* argv[]) {
     warmupConfig.logsPerThread   = warmupLogsPerThread;
     warmupConfig.measureLatency  = false;
 
+    auto startWarmTime = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < config.numThreads; ++i) {
       warmupThreads.emplace_back(logGenerationThread, i, warmupConfig);
     }
@@ -1082,6 +1059,11 @@ int main(int argc, char* argv[]) {
     for (auto& thread : warmupThreads) {
       thread.join();
     }
+
+    auto endWarmTime = std::chrono::high_resolution_clock::now();
+    auto seconds =
+        std::chrono::duration<double>(endWarmTime - startWarmTime).count();
+    std::cout << "热身实际耗时:" << seconds << "s" << std::endl;
 
     // 清除计数器
     g_totalLogsGenerated.store(0);
@@ -1131,6 +1113,7 @@ int main(int argc, char* argv[]) {
       std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime)
           .count() /
       1000.0;
+  std::cout << "主测试实际耗时:" << elapsedSeconds << "s" << std::endl;
 
   // 计算指标
   metrics.logsPerSecond =
