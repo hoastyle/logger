@@ -37,24 +37,24 @@ ILogger* LoggerFactory::createLogger(const LogConfig& config) {
 
   switch (config.logSinkType_) {
     case detail::LogSinkType::LogSinkType_Stdout: {
-      logger = new (std::nothrow) StdoutLogger();
+      logger = new (std::nothrow) StdoutLogger(config.logToConsole_);
       break;
     }
     case detail::LogSinkType::LogSinkType_GLog: {
       logger = new (std::nothrow) GlogLogger(config.appId_,
           config.logLevelToStderr_, config.logLevelToFile_, config.logToFile_,
-          config.logFilePath_, config.logDebugSwitch_);
+          config.logFilePath_, config.logDebugSwitch_, config.logToConsole_);
       break;
     }
     case detail::LogSinkType::LogSinkType_OptimizedGLog: {
       // Create the optimized logger with performance settings
-      logger = new (std::nothrow)
-          OptimizedGlogLogger(config.appId_, config.logLevelToStderr_,
-              config.logLevelToFile_, config.logToFile_, config.logFilePath_,
-              config.logDebugSwitch_, config.optimizationConfig_.batchSize,
-              config.optimizationConfig_.queueCapacity,
-              config.optimizationConfig_.numWorkers,
-              config.optimizationConfig_.poolSize);
+      logger = new (std::nothrow) OptimizedGlogLogger(config.appId_,
+          config.logLevelToStderr_, config.logLevelToFile_, config.logToFile_,
+          config.logFilePath_, config.logDebugSwitch_, config.logToConsole_,
+          config.optimizationConfig_.batchSize,
+          config.optimizationConfig_.queueCapacity,
+          config.optimizationConfig_.numWorkers,
+          config.optimizationConfig_.poolSize);
       break;
     }
     default: break;

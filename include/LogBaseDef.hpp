@@ -84,7 +84,6 @@ struct LoggerOptimizationConfig {
   size_t poolSize;       // Size of the memory pool
 };
 
-// Update LogConfig to include optimization settings
 struct LogConfig {
   LogConfig() noexcept
       : appId_(),
@@ -93,6 +92,8 @@ struct LogConfig {
         logSinkType_(detail::LogSinkType_Stdout),
         logToFile_(false),
         logFilePath_(),
+        logDebugSwitch_(false),
+        logToConsole_(false),
         optimizationConfig_() {}
 
   virtual ~LogConfig() = default;
@@ -104,7 +105,8 @@ struct LogConfig {
   mm::LogToFile logToFile_;
   mm::LogFilePath logFilePath_;
   mm::LogDebugSwitch logDebugSwitch_;
-  LoggerOptimizationConfig optimizationConfig_;  // Add this field
+  bool logToConsole_;  // New option to control console output
+  LoggerOptimizationConfig optimizationConfig_;
 };
 
 }  // namespace mm

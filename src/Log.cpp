@@ -330,12 +330,12 @@ std::string convertOutputLogToStr(const detail::LogLevel lvl,
 }  // namespace detail
 
 // Update usage function in Log.cpp to include new options
-
 void usage(int ecode) noexcept {
   fprintf(stderr,
       "mCrane [options][parameter]: description\n"
       "  [--aplc]=<on/off>: options for open/close plc module\n"
       "  [--appid]: set current proc name with appid\n"
+      "  [--console]=<true|false>: options for enable/disable console output\n"
       "  [--coredump]=<on/off>: options for open/close coredump\n"
       "  [--debugSwitch]: true/false, enable/disable MM_DEBUG\n"
       "  [--file]=<true|false>: options for open/close log file mode\n"

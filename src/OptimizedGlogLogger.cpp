@@ -101,14 +101,15 @@ OptimizedGlogLogger::OptimizedGlogLogger(const std::string& appId,
     const detail::LogLevel logLevelToStderr,
     const detail::LogLevel logLevelToFile, const LogToFile logToFile,
     const LogFilePath logFilePath, const LogDebugSwitch logDebugSwitch,
-    size_t batchSize, size_t queueCapacity, size_t numWorkers,
-    size_t poolSize) noexcept
+    const bool logToConsole, size_t batchSize, size_t queueCapacity,
+    size_t numWorkers, size_t poolSize) noexcept
     : appId_(appId),
       logLevelToStderr_(logLevelToStderr),
       logLevelToFile_(logLevelToFile),
       logToFile_(logToFile),
       logFilePath_(logFilePath),
       logDebugSwitch_(logDebugSwitch),
+      logToConsole_(logToConsole),
       batchSize_(batchSize),
       queueCapacity_(queueCapacity),
       numWorkers_(numWorkers),
@@ -142,8 +143,15 @@ int OptimizedGlogLogger::setup() {
 
   // Configure glog for optimal performance
   google::EnableLogCleaner(GLOG_OVERDUE_DAY);
-  google::SetStderrLogging(convertLogLevel(logLevelToStderr_));
-  FLAGS_colorlogtostderr = true;
+
+  if (logToConsole_) {
+    google::SetStderrLogging(convertLogLevel(logLevelToStderr_));
+    FLAGS_colorlogtostderr = true;
+  } else {
+    // Disable log to stderr
+    // Set to level higher than FATAL to disable console output
+    google::SetStderrLogging(google::GLOG_FATAL + 1);
+  }
 
   // Performance optimizations for glog
   FLAGS_logbufsecs                = 0;     // Flush log file after each write

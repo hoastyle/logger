@@ -61,8 +61,8 @@ class GlogLogger final : public ILogger {
 
   GlogLogger(const std::string& appId, const detail::LogLevel logLevelToStderr,
       const detail::LogLevel logLevelToFile, const LogToFile logToFile,
-      const LogFilePath logFilePath,
-      const LogDebugSwitch logDebugSwitch) noexcept;
+      const LogFilePath logFilePath, const LogDebugSwitch logDebugSwitch,
+      const bool logToConsole = false) noexcept;
 
   virtual ~GlogLogger() override = default;
 
@@ -85,6 +85,7 @@ class GlogLogger final : public ILogger {
   LogToFile logToFile_;
   LogFilePath logFilePath_;
   LogDebugSwitch logDebugSwitch_;
+  bool logToConsole_;
 };
 
 }  // namespace mm

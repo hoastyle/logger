@@ -32,32 +32,44 @@ int StdoutLogger::teardown() { return MM_STATUS_OK; }
 
 void StdoutLogger::logVerbose(const char* msg, const std::size_t len) {
   (void)(len);
-  printf("%s\n", msg);
+  if (logToConsole_) {
+    printf("%s\n", msg);
+  }
 }
 
 void StdoutLogger::logDebug(const char* msg, const std::size_t len) {
   (void)(len);
-  printf("%s\n", msg);
+  if (logToConsole_) {
+    printf("%s\n", msg);
+  }
 }
 
 void StdoutLogger::logInfo(const char* msg, const std::size_t len) {
   (void)(len);
-  printf("%s\n", msg);
+  if (logToConsole_) {
+    printf("%s\n", msg);
+  }
 }
 
 void StdoutLogger::logWarn(const char* msg, const std::size_t len) {
   (void)(len);
-  printf("%s\n", msg);
+  if (logToConsole_) {
+    printf("%s\n", msg);
+  }
 }
 
 void StdoutLogger::logError(const char* msg, const std::size_t len) {
   (void)(len);
-  printf("%s\n", msg);
+  if (logToConsole_) {
+    printf("%s\n", msg);
+  }
 }
 
 void StdoutLogger::logFatal(const char* msg, const std::size_t len) {
   (void)(len);
-  printf("%s\n", msg);
+  if (logToConsole_) {
+    printf("%s\n", msg);
+  }
 }
 
 }  // namespace mm

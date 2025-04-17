@@ -11,6 +11,10 @@ add_executable(mmlogger_example example.cpp)
 add_executable(mmlogger_advanced_example advanced_example.cpp)
 add_executable(mmlogger_optimized_glog_example optimized_glog_example.cpp)
 
+# Complete example showing all features
+add_executable(mmlogger_complete_example complete_example.cpp)
+target_link_libraries(mmlogger_complete_example PRIVATE MMLogger)
+
 # Link with MMLogger
 target_link_libraries(mmlogger_example PRIVATE MMLogger)
 target_link_libraries(mmlogger_advanced_example PRIVATE MMLogger)

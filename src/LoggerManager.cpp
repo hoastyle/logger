@@ -52,6 +52,7 @@ void LoggerManager::initCmdLineFlags(const char* appId) noexcept {
   config_.logToFile_        = false;
   config_.logFilePath_      = "";
   config_.logDebugSwitch_   = false;
+  config_.logToConsole_     = false;
 }
 
 int LoggerManager::setup(int argc, char* argv[]) noexcept {
@@ -157,9 +158,22 @@ int LoggerManager::parseCmdLineFlags(int argc, char* argv[]) noexcept {
         fprintf(stderr, "sinktype value %s is invalid!\n", sinktype);
         usage(1);
       }
-    }
-    // Add new command line parameters for optimization settings
-    else if (strstr(arg, "--batchSize=") == arg) {
+    } else if (strstr(arg, "--console=") == arg) {
+      if (*(strchr(arg, '=') + 1) == '\0') {
+        fprintf(stderr, "\"--console=\" requires a true/false value\n");
+        usage(1);
+      }
+      const char* console = strchr(arg, '=') + 1;
+      if ((strcmp(console, "true") == 0) || (strcmp(console, "TRUE") == 0)) {
+        config_.logToConsole_ = true;
+      } else if ((strcmp(console, "false") == 0) ||
+                 (strcmp(console, "FALSE") == 0)) {
+        config_.logToConsole_ = false;
+      } else {
+        fprintf(stderr, "console value %s is invalid!\n", console);
+        usage(1);
+      }
+    } else if (strstr(arg, "--batchSize=") == arg) {
       if (*(strchr(arg, '=') + 1) == '\0') {
         fprintf(stderr, "\"--batchSize=\" requires a number\n");
         usage(1);

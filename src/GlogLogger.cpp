@@ -31,13 +31,15 @@ namespace mm {
 GlogLogger::GlogLogger(const std::string& appId,
     const detail::LogLevel logLevelToStderr,
     const detail::LogLevel logLevelToFile, const LogToFile logToFile,
-    const LogFilePath logFilePath, const LogDebugSwitch logDebugSwitch) noexcept
+    const LogFilePath logFilePath, const LogDebugSwitch logDebugSwitch,
+    const bool logToConsole) noexcept
     : appId_(appId),
       logLevelToStderr_(logLevelToStderr),
       logLevelToFile_(logLevelToFile),
       logToFile_(logToFile),
       logFilePath_(logFilePath),
-      logDebugSwitch_(logDebugSwitch) {
+      logDebugSwitch_(logDebugSwitch),
+      logToConsole_(logToConsole) {
   if (logToFile_) {
     if (logFilePath_.empty()) {
       /* get current absolute path */
@@ -59,10 +61,23 @@ int GlogLogger::setup() {
 
   /* set log cleanup days */
   google::EnableLogCleaner(GLOG_OVERDUE_DAY);
-  /* set log to stderr */
-  google::SetStderrLogging(convertLogLevel(logLevelToStderr_));
-  /* set color */
-  FLAGS_colorlogtostderr = true;
+
+  if (logToConsole_) {
+    // default to file
+    FLAGS_logtostderr = false;
+    // output to console & file
+    FLAGS_alsologtostderr = true;
+    // control level to console
+    FLAGS_stderrthreshold = convertLogLevel(logLevelToStderr_);
+    // enable color output
+    FLAGS_colorlogtostderr = true;
+  } else {
+    // disable console output
+    FLAGS_logtostderr = false;
+    // disable output to console & file at the same time
+    FLAGS_alsologtostderr = false;
+    FLAGS_stderrthreshold = google::GLOG_FATAL;
+  }
 
   /* set log to file */
   if (logToFile_) {

@@ -68,8 +68,9 @@ class OptimizedGlogLogger final : public ILogger {
       const detail::LogLevel logLevelToStderr,
       const detail::LogLevel logLevelToFile, const LogToFile logToFile,
       const LogFilePath logFilePath, const LogDebugSwitch logDebugSwitch,
-      size_t batchSize = 100, size_t queueCapacity = 10000,
-      size_t numWorkers = 2, size_t poolSize = 10000) noexcept;
+      const bool logToConsole = false, size_t batchSize = 100,
+      size_t queueCapacity = 10000, size_t numWorkers = 2,
+      size_t poolSize = 10000) noexcept;
 
   virtual ~OptimizedGlogLogger() override;
 
@@ -147,6 +148,7 @@ class OptimizedGlogLogger final : public ILogger {
   LogToFile logToFile_;
   LogFilePath logFilePath_;
   LogDebugSwitch logDebugSwitch_;
+  bool logToConsole_;
 
   // Performance configuration
   const size_t batchSize_;

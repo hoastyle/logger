@@ -30,7 +30,8 @@ namespace mm {
 
 class StdoutLogger final : public ILogger {
  public:
-  StdoutLogger() noexcept          = default;
+  StdoutLogger(bool logToConsole = false) noexcept
+      : logToConsole_(logToConsole) {}
   virtual ~StdoutLogger() override = default;
 
   virtual int setup() override;
@@ -42,6 +43,9 @@ class StdoutLogger final : public ILogger {
   virtual void logWarn(const char* msg, const std::size_t len) override;
   virtual void logError(const char* msg, const std::size_t len) override;
   virtual void logFatal(const char* msg, const std::size_t len) override;
+
+ private:
+  bool logToConsole_;  // Flag to control console output
 };
 
 }  // namespace mm
