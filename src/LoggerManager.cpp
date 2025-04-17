@@ -221,6 +221,43 @@ int LoggerManager::parseCmdLineFlags(int argc, char* argv[]) noexcept {
         fprintf(stderr, "logtofile value %s is invalid!\n", logtofile);
         usage(1);
       }
+    } else if (strstr(arg, "--filepath=") == arg) {
+      if (*(strchr(arg, '=') + 1) == '\0') {
+        fprintf(stderr, "\"--filepath=\" requires a path\n");
+        usage(1);
+      }
+      const char* filepath = strchr(arg, '=') + 1;
+      config_.logFilePath_ = filepath;
+    } else if (strstr(arg, "--appid=") == arg) {
+      if (*(strchr(arg, '=') + 1) == '\0') {
+        fprintf(stderr, "\"--appid=\" requires a name\n");
+        usage(1);
+      }
+      const char* appid = strchr(arg, '=') + 1;
+      config_.appId_    = appid;
+    } else if (strstr(arg, "--debugSwitch=") == arg) {
+      if (*(strchr(arg, '=') + 1) == '\0') {
+        fprintf(stderr, "\"--debugSwitch=\" requires a true/false value\n");
+        usage(1);
+      }
+      const char* debugSwitch = strchr(arg, '=') + 1;
+      if ((strcmp(debugSwitch, "true") == 0) ||
+          (strcmp(debugSwitch, "TRUE") == 0)) {
+        config_.logDebugSwitch_ = true;
+      } else if ((strcmp(debugSwitch, "false") == 0) ||
+                 (strcmp(debugSwitch, "FALSE") == 0)) {
+        config_.logDebugSwitch_ = false;
+      } else {
+        fprintf(stderr, "debugSwitch value %s is invalid!\n", debugSwitch);
+        usage(1);
+      }
+    } else if (strstr(arg, "--help") == arg || strcmp(arg, "-h") == 0 ||
+               strcmp(arg, "-?") == 0) {
+      usage(0);
+    } else {
+      // Handle unknown argument
+      fprintf(stderr, "Unknown command line argument: %s\n", arg);
+      usage(1);
     }
 
     // ... [rest of the existing code remains unchanged]
