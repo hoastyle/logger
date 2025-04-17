@@ -1000,6 +1000,10 @@ int main(int argc, char* argv[]) {
   std::vector<std::string> loggerArgs = {
       "--sinktype=" + config.loggerType, "--toTerm=" + config.logLevel};
 
+  loggerArgs.push_back(
+      "--console=" +
+      std::string(config.enableConsoleOutput ? "true" : "false"));
+
   if (config.enableFileOutput) {
     loggerArgs.push_back("--file=true");
     loggerArgs.push_back("--filepath=" + config.logFilePath);
