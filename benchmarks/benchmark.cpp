@@ -643,9 +643,44 @@ bool getLoggerInternalStats(PerformanceMetrics& metrics,
 // 将结果写入CSV
 void writeResultsToCSV(const BenchmarkConfig& config,
     const PerformanceMetrics& metrics, const std::string& systemInfo) {
+  // 首先打印输出文件路径，方便调试
+  std::cerr << "Writing results to CSV file: " << config.outputFile << std::endl;
+
+  // 确保输出目录存在
+  std::filesystem::path outputPath(config.outputFile);
+  std::filesystem::create_directories(outputPath.parent_path());
+
   std::ofstream outputFile;
   if (config.appendOutput) {
     outputFile.open(config.outputFile, std::ios_base::app);
+
+    // 检查文件是否为空，如果是空文件则需要添加头
+    bool needHeader = false;
+    if (outputFile.is_open()) {
+      // 获取文件大小
+      outputFile.seekp(0, std::ios::end);
+      if (outputFile.tellp() == 0) {
+        needHeader = true;
+      }
+      // 回到文件末尾准备追加
+      outputFile.seekp(0, std::ios::end);
+    }
+
+    // 如果需要头，写入头
+    if (needHeader) {
+      outputFile << "Timestamp,TestID,TestName,LoggerType,ConsoleOutput,"
+                    "FileOutput,LogLevel,"
+                 << "NumThreads,LogsPerThread,MessageSize,LogRate,"
+                 << "DebugPct,InfoPct,WarnPct,ErrorPct,"
+                 << "BatchSize,QueueCapacity,NumWorkers,PoolSize,"
+                 << "LogsPerSecond,BytesPerSecond,"
+                 << "AvgLatencyUs,P50LatencyUs,P90LatencyUs,P95LatencyUs,"
+                    "P99LatencyUs,MaxLatencyUs,"
+                 << "CPUPercent,MemoryMB,DiskWritesBps,DiskWritesMBs,"
+                 << "EnqueuedCount,ProcessedCount,DroppedCount,OverflowCount,"
+                    "QueueUtilization,"
+                 << "SystemInfo" << std::endl;
+    }
   } else {
     outputFile.open(config.outputFile);
 
@@ -664,6 +699,11 @@ void writeResultsToCSV(const BenchmarkConfig& config,
                     "QueueUtilization,"
                  << "SystemInfo" << std::endl;
     }
+  }
+
+  if (!outputFile.is_open()) {
+    std::cerr << "错误: 无法打开输出文件: " << config.outputFile << std::endl;
+    return;
   }
 
   // 获取当前时间戳
@@ -705,12 +745,25 @@ void writeResultsToCSV(const BenchmarkConfig& config,
 
   outputFile.close();
 
+  // 验证文件是否正确写入
+  std::ifstream verifyFile(config.outputFile);
+  if (verifyFile.is_open()) {
+    verifyFile.seekg(0, std::ios::end);
+    auto fileSize = verifyFile.tellg();
+    verifyFile.close();
+
+    std::cerr << "已成功写入CSV文件: " << config.outputFile
+              << ", 文件大小: " << fileSize << " 字节" << std::endl;
+  } else {
+    std::cerr << "警告: 无法验证输出文件是否正确写入" << std::endl;
+  }
+
   if (config.verboseOutput) {
     std::cout << "结果已写入 " << config.outputFile << std::endl;
   }
 }
 
-// 解析命令行参数
+// Parse command line arguments
 bool parseArgs(int argc, char* argv[], BenchmarkConfig& config) {
   // 从环境变量读取配置（由Python脚本设置）
   const char* envVars[] = {"TEST_ID", "TEST_NAME", "LOGGER_TYPE",
@@ -722,11 +775,24 @@ bool parseArgs(int argc, char* argv[], BenchmarkConfig& config) {
       "MEASURE_LATENCY", "USE_RATE_LIMIT"};
 
   std::map<std::string, std::string> envValues;
+  std::cerr << "Reading environment variables:" << std::endl;
   for (const char* var : envVars) {
     const char* value = getenv(var);
     if (value) {
       envValues[var] = value;
+      std::cerr << "  " << var << " = " << value << std::endl;
     }
+  }
+
+  // 检查OUTPUT_FILE环境变量（这是最关键的一个）
+  const char* outputFileEnv = getenv("OUTPUT_FILE");
+  if (outputFileEnv) {
+    std::cerr << "Found OUTPUT_FILE environment variable: " << outputFileEnv << std::endl;
+    // 确保使用此值而不是默认值
+    config.outputFile = outputFileEnv;
+  } else {
+    std::cerr << "WARNING: OUTPUT_FILE environment variable not set, using default: "
+              << config.outputFile << std::endl;
   }
 
   // 设置默认值或使用环境变量值
@@ -787,8 +853,12 @@ bool parseArgs(int argc, char* argv[], BenchmarkConfig& config) {
                                    ? std::stoi(envValues["COOLDOWN_SECONDS"])
                                    : 2;
 
-  config.outputFile = envValues.count("OUTPUT_FILE") ? envValues["OUTPUT_FILE"]
-                                                     : "benchmark_results.csv";
+  // 只有未设置OUTPUT_FILE环境变量时才使用默认值或配置中的值
+  if (!outputFileEnv) {
+    config.outputFile = envValues.count("OUTPUT_FILE") ? envValues["OUTPUT_FILE"]
+                                                       : "benchmark_results.csv";
+  }
+
   config.appendOutput   = envValues.count("APPEND_OUTPUT")
                               ? (envValues["APPEND_OUTPUT"] == "true")
                               : true;
@@ -802,147 +872,11 @@ bool parseArgs(int argc, char* argv[], BenchmarkConfig& config) {
                               ? (envValues["USE_RATE_LIMIT"] == "true")
                               : false;
 
-  // 解析命令行参数（覆盖环境变量）
-  for (int i = 1; i < argc; i++) {
-    std::string arg = argv[i];
-
-    if (arg == "--help") {
-      std::cout << "MMLogger性能测试工具" << std::endl;
-      std::cout << "用法: " << argv[0] << " [选项]" << std::endl;
-      std::cout << "选项:" << std::endl;
-      std::cout << "  --test-id=ID             测试ID (默认: " << config.testId
-                << ")" << std::endl;
-      std::cout << "  --test-name=NAME         测试名称 (默认: "
-                << config.testName << ")" << std::endl;
-      std::cout << "  --logger-type=TYPE       日志器类型: Stdout, GLog, "
-                   "OptimizedGLog (默认: "
-                << config.loggerType << ")" << std::endl;
-      std::cout << "  --enable-console=BOOL    是否启用控制台输出 (默认: "
-                << (config.enableConsoleOutput ? "true" : "false") << ")"
-                << std::endl;
-      std::cout << "  --enable-file=BOOL       是否启用文件输出 (默认: "
-                << (config.enableFileOutput ? "true" : "false") << ")"
-                << std::endl;
-      std::cout << "  --log-file-path=PATH     日志文件路径 (默认: "
-                << config.logFilePath << ")" << std::endl;
-      std::cout << "  --log-level=LEVEL        日志级别: debug, info, warn, "
-                   "error (默认: "
-                << config.logLevel << ")" << std::endl;
-      std::cout << "  --num-threads=N          日志线程数量 (默认: "
-                << config.numThreads << ")" << std::endl;
-      std::cout << "  --logs-per-thread=N      每线程日志数量 (默认: "
-                << config.logsPerThread << ")" << std::endl;
-      std::cout << "  --log-msg-size=N         日志消息大小(字节) (默认: "
-                << config.logMessageSize << ")" << std::endl;
-      std::cout
-          << "  --log-rate=N             每秒日志数量(0表示最快速度) (默认: "
-          << config.logRatePerSecond << ")" << std::endl;
-      std::cout << "  --measure-latency=BOOL   是否测量延迟 (默认: "
-                << (config.measureLatency ? "true" : "false") << ")"
-                << std::endl;
-      std::cout << "  --use-rate-limit=BOOL    是否使用速率限制 (默认: "
-                << (config.useRateLimit ? "true" : "false") << ")" << std::endl;
-      std::cout << "  --debug-pct=N            DEBUG级别日志百分比 (默认: "
-                << config.debugLogPercentage << ")" << std::endl;
-      std::cout << "  --info-pct=N             INFO级别日志百分比 (默认: "
-                << config.infoLogPercentage << ")" << std::endl;
-      std::cout << "  --warn-pct=N             WARN级别日志百分比 (默认: "
-                << config.warnLogPercentage << ")" << std::endl;
-      std::cout << "  --error-pct=N            ERROR级别日志百分比 (默认: "
-                << config.errorLogPercentage << ")" << std::endl;
-      std::cout << "  --batch-size=N           批处理大小 (默认: "
-                << config.batchSize << ")" << std::endl;
-      std::cout << "  --queue-capacity=N       队列容量 (默认: "
-                << config.queueCapacity << ")" << std::endl;
-      std::cout << "  --num-workers=N          工作线程数 (默认: "
-                << config.numWorkers << ")" << std::endl;
-      std::cout << "  --pool-size=N            内存池大小 (默认: "
-                << config.poolSize << ")" << std::endl;
-      std::cout << "  --warmup-seconds=N       预热时间(秒) (默认: "
-                << config.warmupSeconds << ")" << std::endl;
-      std::cout << "  --test-duration=N        测试持续时间(秒) (默认: "
-                << config.testDurationSeconds << ")" << std::endl;
-      std::cout << "  --cooldown-seconds=N     冷却时间(秒) (默认: "
-                << config.cooldownSeconds << ")" << std::endl;
-      std::cout << "  --output-file=PATH       输出文件路径 (默认: "
-                << config.outputFile << ")" << std::endl;
-      std::cout << "  --append-output=BOOL     是否追加到输出文件 (默认: "
-                << (config.appendOutput ? "true" : "false") << ")" << std::endl;
-      std::cout << "  --verbose=BOOL           是否显示详细输出 (默认: "
-                << (config.verboseOutput ? "true" : "false") << ")"
-                << std::endl;
-      return false;
-    }
-
-    // 解析形如 --key=value 的参数
-    size_t equalPos = arg.find('=');
-    if (equalPos != std::string::npos && arg.substr(0, 2) == "--") {
-      std::string key   = arg.substr(2, equalPos - 2);
-      std::string value = arg.substr(equalPos + 1);
-
-      if (key == "test-id")
-        config.testId = value;
-      else if (key == "test-name")
-        config.testName = value;
-      else if (key == "logger-type")
-        config.loggerType = value;
-      else if (key == "enable-console")
-        config.enableConsoleOutput = (value == "true");
-      else if (key == "enable-file")
-        config.enableFileOutput = (value == "true");
-      else if (key == "log-file-path")
-        config.logFilePath = value;
-      else if (key == "log-level")
-        config.logLevel = value;
-      else if (key == "num-threads")
-        config.numThreads = std::stoi(value);
-      else if (key == "logs-per-thread")
-        config.logsPerThread = std::stoi(value);
-      else if (key == "log-msg-size")
-        config.logMessageSize = std::stoi(value);
-      else if (key == "log-rate")
-        config.logRatePerSecond = std::stoi(value);
-      else if (key == "measure-latency")
-        config.measureLatency = (value == "true");
-      else if (key == "use-rate-limit")
-        config.useRateLimit = (value == "true");
-      else if (key == "debug-pct")
-        config.debugLogPercentage = std::stod(value);
-      else if (key == "info-pct")
-        config.infoLogPercentage = std::stod(value);
-      else if (key == "warn-pct")
-        config.warnLogPercentage = std::stod(value);
-      else if (key == "error-pct")
-        config.errorLogPercentage = std::stod(value);
-      else if (key == "batch-size")
-        config.batchSize = std::stoi(value);
-      else if (key == "queue-capacity")
-        config.queueCapacity = std::stoi(value);
-      else if (key == "num-workers")
-        config.numWorkers = std::stoi(value);
-      else if (key == "pool-size")
-        config.poolSize = std::stoi(value);
-      else if (key == "warmup-seconds")
-        config.warmupSeconds = std::stoi(value);
-      else if (key == "test-duration")
-        config.testDurationSeconds = std::stoi(value);
-      else if (key == "cooldown-seconds")
-        config.cooldownSeconds = std::stoi(value);
-      else if (key == "output-file")
-        config.outputFile = value;
-      else if (key == "append-output")
-        config.appendOutput = (value == "true");
-      else if (key == "verbose")
-        config.verboseOutput = (value == "true");
-      else {
-        std::cerr << "未知参数: " << arg << std::endl;
-        return false;
-      }
-    } else {
-      std::cerr << "无效参数格式: " << arg << std::endl;
-      return false;
-    }
-  }
+  // 输出最终配置，方便调试
+  std::cerr << "最终配置:" << std::endl;
+  std::cerr << "  测试ID: " << config.testId << std::endl;
+  std::cerr << "  输出文件: " << config.outputFile << std::endl;
+  std::cerr << "  日志器类型: " << config.loggerType << std::endl;
 
   return true;
 }

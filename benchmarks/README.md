@@ -1,184 +1,202 @@
-# MMLogger性能评估框架
+# MMLogger Benchmark System
 
-这是一个用于评估MMLogger库性能的综合测试框架，结合了C++、Python和YAML的优势，提供了灵活、可配置的性能测试环境。
+This directory contains the benchmark tools for testing the performance of the MMLogger library. The system has been redesigned to ensure proper integration between the YAML configuration, Python runner script, and C++ benchmark implementation.
 
-## 功能特点
+## Overview
 
-- **灵活的配置**: 通过YAML配置文件定义测试场景，无需修改源代码
-- **全面的性能指标**: 测量吞吐量、延迟、CPU使用率、内存占用和磁盘I/O
-- **多维度测试**: 可测试线程数量、日志大小、输出目标等因素的影响
-- **自动结果收集**: 将测试结果以标准CSV格式输出，便于后续分析
-- **测试重复与汇总**: 支持多次重复测试以获取稳定结果，并自动生成统计摘要
+The benchmark system consists of:
 
-## 系统要求
+1. **Configuration Files**: YAML files that define test suites and test cases
+2. **Python Runner Script**: Handles test execution, environment configuration, and result processing
+3. **C++ Benchmark Program**: Performs the actual benchmarking with the specified parameters
+4. **Bash Script Wrapper**: Provides an easy-to-use command-line interface
 
-- C++17兼容的编译器 (GCC 7+, Clang 5+)
-- Python 3.6+
-- CMake 3.14+
-- Google glog库
-- PyYAML
+## Quick Start
 
-## 目录结构
-
-```
-mmlogger-benchmark/
-├── benchmarks/               # 性能测试C++源代码
-│   ├── CMakeLists.txt
-│   └── mmlogger_benchmark.cpp
-├── build/                    # 构建输出目录
-├── include/                  # MMLogger头文件
-├── results/                  # 测试结果输出目录
-├── src/                      # MMLogger实现源码
-├── CMakeLists.txt            # 主CMake文件
-├── Makefile                  # 构建和运行测试的Makefile
-├── README.md                 # 本文档
-├── run_benchmarks.py         # Python测试运行器
-└── test_config.yaml          # 测试配置文件
-```
-
-## 快速入门
-
-### 安装依赖项
+To run all benchmarks with default settings:
 
 ```bash
-# 安装Python依赖
-pip install pyyaml
-
-# 安装系统依赖
-sudo apt-get install build-essential cmake libgoogle-glog-dev
+./run_benchmark.sh
 ```
 
-### 构建并运行测试
-
-使用提供的Makefile可以轻松构建和运行测试:
+To run a specific test suite:
 
 ```bash
-# 构建并运行所有测试
-make
-
-# 运行特定测试套件
-make benchmark-suite SUITE="吞吐量测试"
-
-# 运行特定测试
-make benchmark-test TEST_ID=throughput_optimized
-
-# 重复运行测试
-make benchmark-repeat REPEAT=3
+./run_benchmark.sh --suite="Basic Performance Comparison"
 ```
 
-### 查看结果
+To run a specific test multiple times:
 
-测试结果将保存在`results/`目录下，按时间戳分组:
+```bash
+./run_benchmark.sh --test=optimized_basic --repeat=3 --verbose
+```
+
+## Configuration
+
+Test configurations are defined in YAML format. The default configuration file is `benchmarks/test_config.yaml`. Each test suite contains multiple test cases with specific parameters.
+
+Example of a test configuration:
+
+```yaml
+- id: "optimized_basic"
+  name: "OptimizedGLog Logger (Basic)"
+  logger_type: "OptimizedGLog"
+  enable_console: true
+  enable_file: true
+  log_file_path: "./logs/optimized"
+  log_level: "info"
+  num_threads: 4
+  logs_per_thread: 100000
+  log_msg_size: 128
+  log_rate: 0
+  batch_size: 200
+  queue_capacity: 10000
+  num_workers: 4
+  pool_size: 20000
+  test_duration: 10
+```
+
+### Configuration Parameters
+
+#### Basic Parameters:
+- `id`: Unique identifier for the test
+- `name`: Human-readable name for the test
+- `logger_type`: Type of logger to test (Stdout, GLog, OptimizedGLog)
+- `enable_console`: Enable console output (true/false)
+- `enable_file`: Enable file output (true/false)
+- `log_file_path`: Path for log files
+- `log_level`: Log level to use (debug, info, warn, error, fatal)
+- `num_threads`: Number of threads generating logs
+- `logs_per_thread`: Number of logs per thread
+- `log_msg_size`: Size of log messages in bytes
+- `log_rate`: Rate limit for logs (0 = unlimited)
+- `test_duration`: Duration of the test in seconds
+
+#### OptimizedGLog Parameters:
+- `batch_size`: Number of messages to batch process
+- `queue_capacity`: Maximum size of the message queue
+- `num_workers`: Number of worker threads
+- `pool_size`: Size of the memory pool
+
+## Running Benchmarks
+
+### Command-Line Options
+
+The `run_benchmark.sh` script provides the following options:
+
+```
+Usage: ./run_benchmark.sh [options]
+
+Run performance benchmarks for MMLogger library
+
+Options:
+  -h, --help              Show this help message
+  -c, --config=FILE       Use specified configuration file (default: benchmarks/test_config.yaml)
+  -s, --suite=NAME        Run only the specified test suite
+  -t, --test=ID           Run only the specified test ID
+  -r, --repeat=N          Repeat each test N times (default: 1)
+  -o, --output=DIR        Set output directory (default: results)
+  --skip-compile          Skip compilation step
+  -v, --verbose           Enable verbose output
+```
+
+### Direct Python Usage
+
+You can also run the Python script directly:
+
+```bash
+python3 benchmarks/run_benchmarks.py --config=test_config.yaml --test-suite="Basic Performance Comparison" --verbose
+```
+
+## Results
+
+Test results are stored in the output directory (default: `results/`) with a timestamp. For each test run, the system generates:
+
+1. **Raw CSV Data**: Contains all performance metrics
+2. **Log Files**: Contains detailed output from the benchmark
+3. **Summary Statistics**: Aggregated metrics for multiple runs
+4. **Performance Reports**: Human-readable reports highlighting key metrics
+
+### Output Structure
 
 ```
 results/
-└── 20250416_123456/          # 测试执行时间戳
-    ├── 吞吐量测试/            # 测试套件
-    │   ├── throughput_glog.csv
-    │   ├── throughput_optimized.csv
-    │   └── throughput_stdout.csv
-    ├── all_results.csv       # 所有测试结果合并
-    ├── all_results_summary.csv # 测试结果统计摘要
-    └── test_config_used.yaml   # 测试使用的配置副本
+└── 20250418_123456/                  # Timestamp
+    ├── test_config_used.yaml         # Copy of the configuration used
+    ├── Basic_Performance_Comparison/ # Test suite folder
+    │   ├── stdout_basic.csv          # Raw test results
+    │   ├── stdout_basic.log          # Test log
+    │   ├── stdout_basic_report.txt   # Performance report
+    │   └── ...                       # Other tests in this suite
+    ├── Threading_Scalability_Tests/  # Another test suite
+    │   └── ...
+    ├── all_results.csv               # Combined results from all tests
+    └── all_results_summary.csv       # Statistical summary
 ```
 
-## 配置测试
+## Customization
 
-所有测试都在`test_config.yaml`文件中定义。您可以修改此文件以添加或调整测试场景。配置文件的结构如下:
+### Creating Custom Test Configurations
+
+You can create your own test configurations by copying and modifying the `test_config.yaml` file:
+
+```bash
+cp benchmarks/test_config.yaml my_config.yaml
+# Edit my_config.yaml with your preferred text editor
+./run_benchmark.sh --config=my_config.yaml
+```
+
+### Adding New Test Suites
+
+To add a new test suite, add a new entry to the YAML file:
 
 ```yaml
-global:
-  # 全局设置，适用于所有测试
-  output_file: "benchmark_results.csv"
-  append_output: true
-  verbose_output: true
-
 test_suites:
-  - name: "测试套件名称"
-    description: "套件描述"
+  - name: "My Custom Test Suite"
+    description: "Description of my test suite"
     tests:
-      - id: "测试ID"
-        name: "测试名称"
-        # 测试参数...
+      - id: "my_test_1"
+        name: "My First Test"
+        logger_type: "OptimizedGLog"
+        # ... other parameters ...
 ```
 
-### 基本参数
+## Troubleshooting
 
-每个测试都支持以下基本参数:
+### Common Issues
 
-| 参数 | 描述 | 默认值 |
-|------|------|--------|
-| `logger_type` | 日志器类型 (Stdout, GLog, OptimizedGLog) | OptimizedGLog |
-| `enable_console` | 是否启用控制台输出 | true |
-| `enable_file` | 是否启用文件输出 | false |
-| `log_file_path` | 日志文件路径 | ./logs |
-| `log_level` | 日志级别 | info |
-| `num_threads` | 生成日志的线程数 | 4 |
-| `logs_per_thread` | 每个线程生成的日志条数 | 100000 |
-| `log_msg_size` | 日志消息大小(字节) | 128 |
-| `log_rate` | 每秒日志生成速率(0表示尽可能快) | 0 |
-| `test_duration` | 测试持续时间(秒) | 10 |
+1. **Missing Test Results**: Ensure that the benchmark binary has been compiled successfully
+2. **Parameter Mismatch**: Verify that parameter names in the YAML match the expected names in the C++ code
+3. **Permissions Issues**: Make sure log directories are writable
 
-### 高级参数
+### Debugging
 
-对于OptimizedGLog，还支持以下高级参数:
+For more detailed output, use the `--verbose` flag:
 
-| 参数 | 描述 | 默认值 |
-|------|------|--------|
-| `batch_size` | 批处理大小 | 200 |
-| `queue_capacity` | 队列容量 | 10000 |
-| `num_workers` | 工作线程数 | 4 |
-| `pool_size` | 内存池大小 | 20000 |
-
-## 自定义测试
-
-您可以根据需要向配置文件添加新的测试套件和测试。例如，添加一个测试不同CPU核心数的测试套件:
-
-```yaml
-- name: "CPU核心测试"
-  description: "测试不同CPU核心数的影响"
-  tests:
-    - id: "cpu_2cores"
-      name: "2核CPU"
-      # 测试参数...
-      
-    - id: "cpu_4cores"
-      name: "4核CPU"
-      # 测试参数...
+```bash
+./run_benchmark.sh --verbose
 ```
 
-## 输出格式
+Check the benchmark log file for detailed information:
 
-性能测试的结果以CSV格式输出，包含以下列:
+```bash
+cat benchmark_runner.log
+```
 
-- `Timestamp`: 测试执行时间戳
-- `TestID`, `TestName`: 测试标识和名称
-- 配置参数: `LoggerType`, `NumThreads`等
-- 性能指标:
-  - `LogsPerSecond`: 每秒日志吞吐量
-  - `BytesPerSecond`: 每秒数据吞吐量
-  - `AvgLatencyUs`: 平均延迟(微秒)
-  - `P50LatencyUs`, `P90LatencyUs`, `P99LatencyUs`: 百分位延迟
-  - `MaxLatencyUs`: 最大延迟
-  - `CPUPercent`: CPU使用率
-  - `MemoryMB`: 内存使用(MB)
-  - `DiskWritesBps`: 磁盘写入速度(字节/秒)
+## Advanced Usage
 
-## 扩展框架
+### Continuous Integration
 
-如果您想要扩展测试框架:
+For CI/CD pipelines, you can use:
 
-1. **添加新的性能指标**: 修改`mmlogger_benchmark.cpp`中的`PerformanceMetrics`结构并更新测量代码
-2. **支持新的日志库**: 需要在基准测试程序中添加支持
-3. **增加更多测试维度**: 更新YAML配置格式和Python运行器
+```bash
+./run_benchmark.sh --skip-compile --config=ci_config.yaml --output=ci_results
+```
 
-## 贡献
+### Comparing Configuration Changes
 
-欢迎通过以下方式贡献:
-- 提交bug报告和功能请求
-- 提交改进建议和文档更新
-- 提交代码改进和新功能
+To compare the impact of configuration changes:
 
-## 许可证
-
-此项目基于同样的许可条款作为MMLogger库。
+1. Create two configuration files with different parameters
+2. Run benchmarks with each configuration
+3. Compare the results using the generated summary files

@@ -1,34 +1,55 @@
-# MMLogger性能测试配置文件
+# MMLogger Performance Test Configuration
 ---
 global:
-  output_file: "benchmark_results.csv"  # 全局结果输出文件
-  append_output: true                   # 是否追加到现有文件
-  verbose_output: true                  # 是否显示详细输出
+  output_file: "benchmark_results.csv"  # Global results output file
+  append_output: true                   # Append to existing file
+  verbose_output: true                  # Enable detailed output
 
 test_suites:
-  - name: "基础性能比较"
-    description: "比较不同日志器的基本性能特征"
+  - name: "Basic Performance Comparison"
+    description: "Compare the basic performance characteristics of different logger implementations"
     tests:
-        #- id: "base_stdout"
-        #  name: "标准输出日志器"
-        #  logger_type: "Stdout"
-        #  enable_console: true
-        #  enable_file: false
-        #  log_level: "info"
-        #  num_threads: 4
-        #  logs_per_thread: 100000
-        #  log_msg_size: 128
-        #  log_rate: 0  # 尽可能快
-        #  debug_pct: 10
-        #  info_pct: 60
-        #  warn_pct: 20
-        #  error_pct: 10
-        #  warmup_seconds: 2
-        #  test_duration: 10
-        #  cooldown_seconds: 2
+      - id: "stdout_basic"
+        name: "Stdout Logger (Basic)"
+        logger_type: "Stdout"
+        enable_console: true
+        enable_file: false
+        log_level: "info"
+        num_threads: 4
+        logs_per_thread: 100000
+        log_msg_size: 128
+        log_rate: 0  # As fast as possible
+        debug_pct: 10
+        info_pct: 60
+        warn_pct: 20
+        error_pct: 10
+        warmup_seconds: 2
+        test_duration: 10
+        cooldown_seconds: 2
+        measure_latency: true
 
-      - id: "base_glog"
-        name: "GLog日志器_console"
+      - id: "glog_basic_console_false"
+        name: "GLog Logger (Basic)"
+        logger_type: "GLog"
+        enable_console: false
+        enable_file: true
+        log_file_path: "./logs/glog"
+        log_level: "info"
+        num_threads: 4
+        logs_per_thread: 100000
+        log_msg_size: 128
+        log_rate: 0
+        debug_pct: 10
+        info_pct: 60
+        warn_pct: 20
+        error_pct: 10
+        warmup_seconds: 2
+        test_duration: 10
+        cooldown_seconds: 2
+        measure_latency: true
+
+      - id: "glog_basic"
+        name: "GLog Logger (Basic)"
         logger_type: "GLog"
         enable_console: true
         enable_file: true
@@ -37,7 +58,7 @@ test_suites:
         num_threads: 4
         logs_per_thread: 100000
         log_msg_size: 128
-        log_rate: 0  # 尽可能快
+        log_rate: 0
         debug_pct: 10
         info_pct: 60
         warn_pct: 20
@@ -45,28 +66,10 @@ test_suites:
         warmup_seconds: 2
         test_duration: 10
         cooldown_seconds: 2
+        measure_latency: true
 
-      - id: "base_glog_no_console"
-        name: "GLog日志器"
-        logger_type: "GLog"
-        enable_console: false
-        enable_file: true
-        log_file_path: "./logs/glog"
-        log_level: "info"
-        num_threads: 4
-        logs_per_thread: 100000
-        log_msg_size: 128
-        log_rate: 0  # 尽可能快
-        debug_pct: 10
-        info_pct: 60
-        warn_pct: 20
-        error_pct: 10
-        warmup_seconds: 2
-        test_duration: 10
-        cooldown_seconds: 2
-
-      - id: "base_optimized_console"
-        name: "优化GLog日志器"
+      - id: "optimized_basic_console_false"
+        name: "OptimizedGLog Logger (Basic)"
         logger_type: "OptimizedGLog"
         enable_console: false
         enable_file: true
@@ -75,7 +78,7 @@ test_suites:
         num_threads: 4
         logs_per_thread: 100000
         log_msg_size: 128
-        log_rate: 0  # 尽可能快
+        log_rate: 0
         debug_pct: 10
         info_pct: 60
         warn_pct: 20
@@ -87,9 +90,10 @@ test_suites:
         warmup_seconds: 2
         test_duration: 10
         cooldown_seconds: 2
+        measure_latency: true
 
-      - id: "base_optimized_no_console"
-        name: "优化GLog日志器"
+      - id: "optimized_basic"
+        name: "OptimizedGLog Logger (Basic)"
         logger_type: "OptimizedGLog"
         enable_console: true
         enable_file: true
@@ -98,7 +102,7 @@ test_suites:
         num_threads: 4
         logs_per_thread: 100000
         log_msg_size: 128
-        log_rate: 0  # 尽可能快
+        log_rate: 0
         debug_pct: 10
         info_pct: 60
         warn_pct: 20
@@ -110,3 +114,4 @@ test_suites:
         warmup_seconds: 2
         test_duration: 10
         cooldown_seconds: 2
+        measure_latency: true
