@@ -644,11 +644,23 @@ bool getLoggerInternalStats(PerformanceMetrics& metrics,
 void writeResultsToCSV(const BenchmarkConfig& config,
     const PerformanceMetrics& metrics, const std::string& systemInfo) {
   // 首先打印输出文件路径，方便调试
-  std::cerr << "Writing results to CSV file: " << config.outputFile << std::endl;
+  std::cerr << "Writing results to CSV file: " << config.outputFile
+            << std::endl;
 
-  // 确保输出目录存在
+  // 确保输出目录存在（如果有目录部分）
   std::filesystem::path outputPath(config.outputFile);
-  std::filesystem::create_directories(outputPath.parent_path());
+  if (!outputPath.parent_path().empty()) {
+    try {
+      std::filesystem::create_directories(outputPath.parent_path());
+      std::cerr << "已创建目录: " << outputPath.parent_path() << std::endl;
+    } catch (const std::filesystem::filesystem_error& e) {
+      std::cerr << "错误: 无法创建目录: " << outputPath.parent_path() << " - "
+                << e.what() << std::endl;
+      // 继续尝试打开文件，因为目录可能已经存在
+    }
+  } else {
+    std::cerr << "注意: 输出文件没有目录部分，将写入当前目录" << std::endl;
+  }
 
   std::ofstream outputFile;
   if (config.appendOutput) {
@@ -765,7 +777,150 @@ void writeResultsToCSV(const BenchmarkConfig& config,
 
 // Parse command line arguments
 bool parseArgs(int argc, char* argv[], BenchmarkConfig& config) {
+  // 解析命令行参数（覆盖环境变量）
+  for (int i = 1; i < argc; i++) {
+    std::string arg = argv[i];
+
+    if (arg == "--help") {
+      std::cout << "MMLogger性能测试工具" << std::endl;
+      std::cout << "用法: " << argv[0] << " [选项]" << std::endl;
+      std::cout << "选项:" << std::endl;
+      std::cout << "  --test-id=ID             测试ID (默认: " << config.testId
+                << ")" << std::endl;
+      std::cout << "  --test-name=NAME         测试名称 (默认: "
+                << config.testName << ")" << std::endl;
+      std::cout << "  --logger-type=TYPE       日志器类型: Stdout, GLog, "
+                   "OptimizedGLog (默认: "
+                << config.loggerType << ")" << std::endl;
+      std::cout << "  --enable-console=BOOL    是否启用控制台输出 (默认: "
+                << (config.enableConsoleOutput ? "true" : "false") << ")"
+                << std::endl;
+      std::cout << "  --enable-file=BOOL       是否启用文件输出 (默认: "
+                << (config.enableFileOutput ? "true" : "false") << ")"
+                << std::endl;
+      std::cout << "  --log-file-path=PATH     日志文件路径 (默认: "
+                << config.logFilePath << ")" << std::endl;
+      std::cout << "  --log-level=LEVEL        日志级别: debug, info, warn, "
+                   "error (默认: "
+                << config.logLevel << ")" << std::endl;
+      std::cout << "  --num-threads=N          日志线程数量 (默认: "
+                << config.numThreads << ")" << std::endl;
+      std::cout << "  --logs-per-thread=N      每线程日志数量 (默认: "
+                << config.logsPerThread << ")" << std::endl;
+      std::cout << "  --log-msg-size=N         日志消息大小(字节) (默认: "
+                << config.logMessageSize << ")" << std::endl;
+      std::cout
+          << "  --log-rate=N             每秒日志数量(0表示最快速度) (默认: "
+          << config.logRatePerSecond << ")" << std::endl;
+      std::cout << "  --measure-latency=BOOL   是否测量延迟 (默认: "
+                << (config.measureLatency ? "true" : "false") << ")"
+                << std::endl;
+      std::cout << "  --use-rate-limit=BOOL    是否使用速率限制 (默认: "
+                << (config.useRateLimit ? "true" : "false") << ")" << std::endl;
+      std::cout << "  --debug-pct=N            DEBUG级别日志百分比 (默认: "
+                << config.debugLogPercentage << ")" << std::endl;
+      std::cout << "  --info-pct=N             INFO级别日志百分比 (默认: "
+                << config.infoLogPercentage << ")" << std::endl;
+      std::cout << "  --warn-pct=N             WARN级别日志百分比 (默认: "
+                << config.warnLogPercentage << ")" << std::endl;
+      std::cout << "  --error-pct=N            ERROR级别日志百分比 (默认: "
+                << config.errorLogPercentage << ")" << std::endl;
+      std::cout << "  --batch-size=N           批处理大小 (默认: "
+                << config.batchSize << ")" << std::endl;
+      std::cout << "  --queue-capacity=N       队列容量 (默认: "
+                << config.queueCapacity << ")" << std::endl;
+      std::cout << "  --num-workers=N          工作线程数 (默认: "
+                << config.numWorkers << ")" << std::endl;
+      std::cout << "  --pool-size=N            内存池大小 (默认: "
+                << config.poolSize << ")" << std::endl;
+      std::cout << "  --warmup-seconds=N       预热时间(秒) (默认: "
+                << config.warmupSeconds << ")" << std::endl;
+      std::cout << "  --test-duration=N        测试持续时间(秒) (默认: "
+                << config.testDurationSeconds << ")" << std::endl;
+      std::cout << "  --cooldown-seconds=N     冷却时间(秒) (默认: "
+                << config.cooldownSeconds << ")" << std::endl;
+      std::cout << "  --output-file=PATH       输出文件路径 (默认: "
+                << config.outputFile << ")" << std::endl;
+      std::cout << "  --append-output=BOOL     是否追加到输出文件 (默认: "
+                << (config.appendOutput ? "true" : "false") << ")" << std::endl;
+      std::cout << "  --verbose=BOOL           是否显示详细输出 (默认: "
+                << (config.verboseOutput ? "true" : "false") << ")"
+                << std::endl;
+      return false;
+    }
+
+    // 解析形如 --key=value 的参数
+    size_t equalPos = arg.find('=');
+    if (equalPos != std::string::npos && arg.substr(0, 2) == "--") {
+      std::string key   = arg.substr(2, equalPos - 2);
+      std::string value = arg.substr(equalPos + 1);
+
+      if (key == "test-id")
+        config.testId = value;
+      else if (key == "test-name")
+        config.testName = value;
+      else if (key == "logger-type")
+        config.loggerType = value;
+      else if (key == "enable-console")
+        config.enableConsoleOutput = (value == "true");
+      else if (key == "enable-file")
+        config.enableFileOutput = (value == "true");
+      else if (key == "log-file-path")
+        config.logFilePath = value;
+      else if (key == "log-level")
+        config.logLevel = value;
+      else if (key == "num-threads")
+        config.numThreads = std::stoi(value);
+      else if (key == "logs-per-thread")
+        config.logsPerThread = std::stoi(value);
+      else if (key == "log-msg-size")
+        config.logMessageSize = std::stoi(value);
+      else if (key == "log-rate")
+        config.logRatePerSecond = std::stoi(value);
+      else if (key == "measure-latency")
+        config.measureLatency = (value == "true");
+      else if (key == "use-rate-limit")
+        config.useRateLimit = (value == "true");
+      else if (key == "debug-pct")
+        config.debugLogPercentage = std::stod(value);
+      else if (key == "info-pct")
+        config.infoLogPercentage = std::stod(value);
+      else if (key == "warn-pct")
+        config.warnLogPercentage = std::stod(value);
+      else if (key == "error-pct")
+        config.errorLogPercentage = std::stod(value);
+      else if (key == "batch-size")
+        config.batchSize = std::stoi(value);
+      else if (key == "queue-capacity")
+        config.queueCapacity = std::stoi(value);
+      else if (key == "num-workers")
+        config.numWorkers = std::stoi(value);
+      else if (key == "pool-size")
+        config.poolSize = std::stoi(value);
+      else if (key == "warmup-seconds")
+        config.warmupSeconds = std::stoi(value);
+      else if (key == "test-duration")
+        config.testDurationSeconds = std::stoi(value);
+      else if (key == "cooldown-seconds")
+        config.cooldownSeconds = std::stoi(value);
+      else if (key == "output-file")
+        config.outputFile = value;
+      else if (key == "append-output")
+        config.appendOutput = (value == "true");
+      else if (key == "verbose")
+        config.verboseOutput = (value == "true");
+      else {
+        std::cerr << "未知参数: " << arg << std::endl;
+        return false;
+      }
+    } else {
+      std::cerr << "无效参数格式: " << arg << std::endl;
+      return false;
+    }
+  }
+
   // 从环境变量读取配置（由Python脚本设置）
+  // 环境变量将覆盖命令行参数设置
   const char* envVars[] = {"TEST_ID", "TEST_NAME", "LOGGER_TYPE",
       "ENABLE_CONSOLE", "ENABLE_FILE", "LOG_FILE_PATH", "LOG_LEVEL",
       "NUM_THREADS", "LOGS_PER_THREAD", "LOG_MSG_SIZE", "LOG_RATE", "DEBUG_PCT",
@@ -784,99 +939,159 @@ bool parseArgs(int argc, char* argv[], BenchmarkConfig& config) {
     }
   }
 
+    // Apply all environment variables to the config object
+  if (const char* value = getenv("TEST_ID")) {
+    config.testId = value;
+    std::cerr << "  TEST_ID = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("TEST_NAME")) {
+    config.testName = value;
+    std::cerr << "  TEST_NAME = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("LOGGER_TYPE")) {
+    config.loggerType = value;
+    std::cerr << "  LOGGER_TYPE = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("ENABLE_CONSOLE")) {
+    config.enableConsoleOutput = (std::string(value) == "true");
+    std::cerr << "  ENABLE_CONSOLE = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("ENABLE_FILE")) {
+    config.enableFileOutput = (std::string(value) == "true");
+    std::cerr << "  ENABLE_FILE = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("LOG_FILE_PATH")) {
+    config.logFilePath = value;
+    std::cerr << "  LOG_FILE_PATH = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("LOG_LEVEL")) {
+    config.logLevel = value;
+    std::cerr << "  LOG_LEVEL = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("NUM_THREADS")) {
+    config.numThreads = std::stoi(value);
+    std::cerr << "  NUM_THREADS = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("LOGS_PER_THREAD")) {
+    config.logsPerThread = std::stoi(value);
+    std::cerr << "  LOGS_PER_THREAD = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("LOG_MSG_SIZE")) {
+    config.logMessageSize = std::stoi(value);
+    std::cerr << "  LOG_MSG_SIZE = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("LOG_RATE")) {
+    config.logRatePerSecond = std::stoi(value);
+    std::cerr << "  LOG_RATE = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("DEBUG_PCT")) {
+    config.debugLogPercentage = std::stod(value);
+    std::cerr << "  DEBUG_PCT = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("INFO_PCT")) {
+    config.infoLogPercentage = std::stod(value);
+    std::cerr << "  INFO_PCT = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("WARN_PCT")) {
+    config.warnLogPercentage = std::stod(value);
+    std::cerr << "  WARN_PCT = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("ERROR_PCT")) {
+    config.errorLogPercentage = std::stod(value);
+    std::cerr << "  ERROR_PCT = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("BATCH_SIZE")) {
+    config.batchSize = std::stoi(value);
+    std::cerr << "  BATCH_SIZE = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("QUEUE_CAPACITY")) {
+    config.queueCapacity = std::stoi(value);
+    std::cerr << "  QUEUE_CAPACITY = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("NUM_WORKERS")) {
+    config.numWorkers = std::stoi(value);
+    std::cerr << "  NUM_WORKERS = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("POOL_SIZE")) {
+    config.poolSize = std::stoi(value);
+    std::cerr << "  POOL_SIZE = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("WARMUP_SECONDS")) {
+    config.warmupSeconds = std::stoi(value);
+    std::cerr << "  WARMUP_SECONDS = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("TEST_DURATION")) {
+    config.testDurationSeconds = std::stoi(value);
+    std::cerr << "  TEST_DURATION = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("COOLDOWN_SECONDS")) {
+    config.cooldownSeconds = std::stoi(value);
+    std::cerr << "  COOLDOWN_SECONDS = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("MEASURE_LATENCY")) {
+    config.measureLatency = (std::string(value) == "true");
+    std::cerr << "  MEASURE_LATENCY = " << value << std::endl;
+  }
+
+  if (const char* value = getenv("USE_RATE_LIMIT")) {
+    config.useRateLimit = (std::string(value) == "true");
+    std::cerr << "  USE_RATE_LIMIT = " << value << std::endl;
+  }
+
   // 检查OUTPUT_FILE环境变量（这是最关键的一个）
   const char* outputFileEnv = getenv("OUTPUT_FILE");
   if (outputFileEnv) {
-    std::cerr << "Found OUTPUT_FILE environment variable: " << outputFileEnv << std::endl;
+    std::cerr << "Found OUTPUT_FILE environment variable: " << outputFileEnv
+              << std::endl;
     // 确保使用此值而不是默认值
     config.outputFile = outputFileEnv;
   } else {
-    std::cerr << "WARNING: OUTPUT_FILE environment variable not set, using default: "
+    std::cerr << "WARNING: OUTPUT_FILE environment variable not set, using"
+              "default or command line value: "
               << config.outputFile << std::endl;
   }
 
-  // 设置默认值或使用环境变量值
-  config.testId =
-      envValues.count("TEST_ID") ? envValues["TEST_ID"] : "benchmark";
-  config.testName   = envValues.count("TEST_NAME") ? envValues["TEST_NAME"]
-                                                   : "MMLogger性能测试";
-  config.loggerType = envValues.count("LOGGER_TYPE") ? envValues["LOGGER_TYPE"]
-                                                     : "OptimizedGLog";
-  config.enableConsoleOutput = envValues.count("ENABLE_CONSOLE")
-                                   ? (envValues["ENABLE_CONSOLE"] == "true")
-                                   : true;
-  config.enableFileOutput    = envValues.count("ENABLE_FILE")
-                                   ? (envValues["ENABLE_FILE"] == "true")
-                                   : false;
-  config.logFilePath =
-      envValues.count("LOG_FILE_PATH") ? envValues["LOG_FILE_PATH"] : "./logs";
-  config.logLevel =
-      envValues.count("LOG_LEVEL") ? envValues["LOG_LEVEL"] : "info";
-
-  config.numThreads =
-      envValues.count("NUM_THREADS") ? std::stoi(envValues["NUM_THREADS"]) : 4;
-  config.logsPerThread  = envValues.count("LOGS_PER_THREAD")
-                              ? std::stoi(envValues["LOGS_PER_THREAD"])
-                              : 100000;
-  config.logMessageSize = envValues.count("LOG_MSG_SIZE")
-                              ? std::stoi(envValues["LOG_MSG_SIZE"])
-                              : 128;
-  config.logRatePerSecond =
-      envValues.count("LOG_RATE") ? std::stoi(envValues["LOG_RATE"]) : 0;
-
-  config.debugLogPercentage =
-      envValues.count("DEBUG_PCT") ? std::stod(envValues["DEBUG_PCT"]) : 10.0;
-  config.infoLogPercentage =
-      envValues.count("INFO_PCT") ? std::stod(envValues["INFO_PCT"]) : 60.0;
-  config.warnLogPercentage =
-      envValues.count("WARN_PCT") ? std::stod(envValues["WARN_PCT"]) : 20.0;
-  config.errorLogPercentage =
-      envValues.count("ERROR_PCT") ? std::stod(envValues["ERROR_PCT"]) : 10.0;
-
-  config.batchSize =
-      envValues.count("BATCH_SIZE") ? std::stoi(envValues["BATCH_SIZE"]) : 200;
-  config.queueCapacity = envValues.count("QUEUE_CAPACITY")
-                             ? std::stoi(envValues["QUEUE_CAPACITY"])
-                             : 10000;
-  config.numWorkers =
-      envValues.count("NUM_WORKERS") ? std::stoi(envValues["NUM_WORKERS"]) : 4;
-  config.poolSize =
-      envValues.count("POOL_SIZE") ? std::stoi(envValues["POOL_SIZE"]) : 20000;
-
-  config.warmupSeconds       = envValues.count("WARMUP_SECONDS")
-                                   ? std::stoi(envValues["WARMUP_SECONDS"])
-                                   : 2;
-  config.testDurationSeconds = envValues.count("TEST_DURATION")
-                                   ? std::stoi(envValues["TEST_DURATION"])
-                                   : 10;
-  config.cooldownSeconds     = envValues.count("COOLDOWN_SECONDS")
-                                   ? std::stoi(envValues["COOLDOWN_SECONDS"])
-                                   : 2;
-
-  // 只有未设置OUTPUT_FILE环境变量时才使用默认值或配置中的值
-  if (!outputFileEnv) {
-    config.outputFile = envValues.count("OUTPUT_FILE") ? envValues["OUTPUT_FILE"]
-                                                       : "benchmark_results.csv";
+  if (const char* value = getenv("APPEND_OUTPUT")) {
+    config.appendOutput = (std::string(value) == "true");
+    std::cerr << "  APPEND_OUTPUT = " << value << std::endl;
   }
 
-  config.appendOutput   = envValues.count("APPEND_OUTPUT")
-                              ? (envValues["APPEND_OUTPUT"] == "true")
-                              : true;
-  config.verboseOutput  = envValues.count("VERBOSE_OUTPUT")
-                              ? (envValues["VERBOSE_OUTPUT"] == "true")
-                              : true;
-  config.measureLatency = envValues.count("MEASURE_LATENCY")
-                              ? (envValues["MEASURE_LATENCY"] == "true")
-                              : true;
-  config.useRateLimit   = envValues.count("USE_RATE_LIMIT")
-                              ? (envValues["USE_RATE_LIMIT"] == "true")
-                              : false;
+  if (const char* value = getenv("VERBOSE_OUTPUT")) {
+    config.verboseOutput = (std::string(value) == "true");
+    std::cerr << "  VERBOSE_OUTPUT = " << value << std::endl;
+  }
 
   // 输出最终配置，方便调试
   std::cerr << "最终配置:" << std::endl;
   std::cerr << "  测试ID: " << config.testId << std::endl;
+  std::cerr << "  测试名称: " << config.testName << std::endl;
   std::cerr << "  输出文件: " << config.outputFile << std::endl;
   std::cerr << "  日志器类型: " << config.loggerType << std::endl;
+  std::cerr << "  控制台输出: " << (config.enableConsoleOutput ? "true" : "false") << std::endl;
+  std::cerr << "  文件输出: " << (config.enableFileOutput ? "true" : "false") << std::endl;
+  std::cerr << "  文件路径: " << config.logFilePath << std::endl;
 
   return true;
 }
